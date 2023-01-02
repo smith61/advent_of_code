@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 
+use fxhash::FxHashMap;
 use itertools::Itertools;
 
+#[derive(Clone)]
 enum Operation {
     Add(u64),
     Mul(u64),
@@ -35,6 +37,7 @@ impl Operation {
 
 }
 
+#[derive(Clone)]
 struct Monkey {
     items: VecDeque<u64>,
     operation: Operation,
@@ -42,6 +45,17 @@ struct Monkey {
     t_target: usize,
     f_target: usize,
     inpsect_count: u64
+}
+
+fn do_iteration<const DIVISOR: u64>(monkey: &mut Monkey, item: &mut u64, g_divisor: u64) -> usize {
+    monkey.inpsect_count += 1;
+    *item = (monkey.operation.eval(*item) / DIVISOR) % g_divisor;
+    if (*item % monkey.divisor) == 0 {
+        monkey.t_target
+
+    } else {
+        monkey.f_target
+    }
 }
 
 fn run_simulation<const ROUNDS: usize, const DIVISOR: u64>(input: &str) -> u64 {
@@ -102,24 +116,66 @@ fn run_simulation<const ROUNDS: usize, const DIVISOR: u64>(input: &str) -> u64 {
         });
     }
 
-    let mut spare_vec = VecDeque::new();
-    for _ in 0..ROUNDS {
-        for index in 0..monkeys.len() {
-            std::mem::swap(&mut spare_vec, &mut monkeys[index].items);
-            monkeys[index].inpsect_count += spare_vec.len() as u64;
-            for item in spare_vec.drain(..) {
-                let mut new_val = monkeys[index].operation.eval(item);
-                new_val /= DIVISOR;
-                new_val %= g_divisor;
-                let t_index = if new_val % monkeys[index].divisor == 0 {
-                    monkeys[index].t_target
+    let mut seen_set = FxHashMap::<(u64, usize), usize>::with_capacity_and_hasher(ROUNDS, Default::default());
+    let mut round_states = vec![0u16; ROUNDS];
+    let mut inspect_counts = vec![0u16; monkeys.len()];
+    for m_index in 0..monkeys.len() {
+        for mut item in std::mem::take(&mut monkeys[m_index].items) {
+            let mut current_position = m_index;
+            let mut round = 0;
+            while round < ROUNDS {
+                if let Some(prev_round) = seen_set.get(&(item, current_position)) {
+                    inspect_counts.fill(0);
+                    for c_r in *prev_round..round {
+                        for m in 0..monkeys.len() {
+                            if (round_states[c_r] & (1 << m)) != 0 {
+                                inspect_counts[m] += 1;
+                            }
+                        }
+                    }
 
-                } else {
-                    monkeys[index].f_target
-                };
+                    let cycle_rounds = round - prev_round;
+                    let repeat_count = (ROUNDS - round) / cycle_rounds;
+                    for m in 0..monkeys.len() {
+                        monkeys[m].inpsect_count += (inspect_counts[m] as u64) * (repeat_count as u64);
+                    }
 
-                monkeys[t_index].items.push_back(new_val);
+                    round += cycle_rounds * repeat_count;
+                    break;
+                }
+
+                seen_set.insert((item, current_position), round);
+                let mut prev_position = current_position;
+                let mut seen_monkeys = 0;
+                loop {
+                    seen_monkeys |= 1 << current_position;
+                    current_position = do_iteration::<DIVISOR>(&mut monkeys[current_position], &mut item, g_divisor);
+                    if current_position <= prev_position {
+                        break;
+                    }
+
+                    prev_position = current_position;
+                }
+
+                round_states[round] = seen_monkeys;
+                round += 1;
             }
+
+            while round < ROUNDS {
+                let mut prev_position = current_position;
+                loop {
+                    current_position = do_iteration::<DIVISOR>(&mut monkeys[current_position], &mut item, g_divisor);
+                    if current_position <= prev_position {
+                        break;
+                    }
+
+                    prev_position = current_position;
+                }
+
+                round += 1;
+            }
+            
+            seen_set.clear();
         }
     }
 
