@@ -33,15 +33,20 @@ impl<const PART_COUNT: u8, const STEP_COUNT: u16> SimulationState<PART_COUNT, ST
         let mut dp_cache =
             Array3::<u16>::zeros((1 << self.node_count, self.node_count as usize, STEP_COUNT as usize));
 
-        let mut queue = BinaryHeap::<Reverse<(u16, usize, usize)>>::new();
-        dp_cache[[0, 0, 0]] = SEEN_BIT;
-        queue.push(Reverse((0, 0, 0)));
+        let mut queue = BinaryHeap::<Reverse<(u16, usize, usize)>>::with_capacity(50000);
+        queue.push(Reverse((0, self.node_count as usize, 0)));
         while let Some(Reverse((current_time, current_node, toggled_valves))) = queue.pop() {
             let rem_time = STEP_COUNT - current_time;
-            let mut new_flow = dp_cache[[toggled_valves, current_node, current_time as usize]];
+            let mut new_flow = if current_node != (self.node_count as usize) {
+                dp_cache[[toggled_valves, current_node, current_time as usize]]
+                
+            } else {
+                0
+            };
+
             new_flow += self.flow_rates[current_node] * rem_time;
             new_flow |= SEEN_BIT;
-            for next_node in 1..self.node_count as usize {
+            for next_node in 0..self.node_count as usize {
                 if toggled_valves & (1 << next_node) != 0 {
                     continue;
                 }
@@ -114,8 +119,20 @@ impl<const PART_COUNT: u8, const STEP_COUNT: u16> SimulationState<PART_COUNT, ST
     fn parse_input(input: &str) -> (Array2<u8>, Vec<u16>, u8) {
         let start_node_id = Self::parse_node_id(&[b'A', b'A'], &mut 0);
     
-        let node_count = input.lines().count();
-        let mut next_flow_node_idx = 1;
+        let mut start_node_index = 0;
+        let node_count =
+            input
+            .lines()
+            .inspect(|line| {
+                let bytes = line.as_bytes();
+                if bytes["Valve XG has flow rate=".len()] != b'0' {
+                    start_node_index += 1;
+                }
+
+            })
+            .count();
+
+        let mut next_flow_node_idx = 0;
         let mut next_blocked_node_idx = node_count - 1;
     
         let mut node_ids = FxHashMap::default();
@@ -153,7 +170,7 @@ impl<const PART_COUNT: u8, const STEP_COUNT: u16> SimulationState<PART_COUNT, ST
             }
     
             let node_index = if node_id == start_node_id {
-                0
+                start_node_index
     
             } else if flow_rate == 0 {
                 let index = next_blocked_node_idx;
