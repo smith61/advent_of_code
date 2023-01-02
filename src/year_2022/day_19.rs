@@ -105,6 +105,153 @@ impl SubAssign<Resources> for Resources {
 
 }
 
+struct State {
+    remaining_time: u16,
+    current_resources: Resources,
+    current_rate: Resources,
+    geodes: u64
+}
+
+impl State {
+
+    fn initial_state(iteration_count: u16) -> Self {
+        Self {
+            remaining_time: iteration_count,
+            current_resources: Resources::new(0, 0, 0),
+            current_rate: Resources::new(1, 0, 0),
+            geodes: 0
+        }
+    }
+
+    fn get_potential(&self) -> u64 {
+        let rem_time = self.remaining_time as u64;
+        (rem_time * (rem_time - 1) / 2) + self.geodes
+    }
+
+    fn get_time_to_build(&self, rb_cost: Resources) -> u16 {
+        let ore_build_time = if self.current_resources.ore < rb_cost.ore {
+            div_ceil(rb_cost.ore - self.current_resources.ore, self.current_rate.ore)
+
+        } else {
+            0
+        };
+        
+        let clay_build_time = if self.current_resources.clay < rb_cost.clay {
+            div_ceil(rb_cost.clay - self.current_resources.clay, self.current_rate.clay)
+
+        } else {
+            0
+        };
+        
+        let obs_build_time = if self.current_resources.obs < rb_cost.obs {
+            div_ceil(rb_cost.obs - self.current_resources.obs, self.current_rate.obs)
+
+        } else {
+            0
+        };
+
+        ore_build_time.max(clay_build_time).max(obs_build_time) + 1
+    }
+
+    fn branch(&self, blueprint: &Blueprint) -> impl Iterator<Item = State> {
+        let max_resources_produced = self.current_resources + (self.current_rate * self.remaining_time);
+        let max_resources_consumed = blueprint.max_rb_cost * self.remaining_time;
+        let geode_state = if self.current_rate.obs > 0 {
+            let build_time = self.get_time_to_build(blueprint.geode_rb_cost);
+            let new_remaining_time = self.remaining_time.checked_sub(build_time).unwrap_or(0);
+            if new_remaining_time >= 1 {
+                let new_resources = self.current_resources + (self.current_rate * build_time) - blueprint.geode_rb_cost;
+                let new_state = State {
+                    remaining_time: new_remaining_time,
+                    current_resources: new_resources,
+                    current_rate: self.current_rate,
+                    geodes: self.geodes + (new_remaining_time as u64)
+                };
+
+                Some(new_state)
+
+            } else {
+                None
+            }
+
+        } else {
+            None
+        };
+
+        let ore_state = if max_resources_produced.ore < max_resources_consumed.ore {
+            let build_time = self.get_time_to_build(blueprint.ore_rb_cost);
+            let new_remaining_time = self.remaining_time.checked_sub(build_time).unwrap_or(0);
+            if new_remaining_time >= 2 {
+                let new_resources = self.current_resources + (self.current_rate * build_time) - blueprint.ore_rb_cost;
+                let new_state = State {
+                    remaining_time: new_remaining_time,
+                    current_resources: new_resources,
+                    current_rate: self.current_rate + Resources::new(1, 0, 0),
+                    geodes: self.geodes
+                };
+
+                Some(new_state)
+
+            } else {
+                None
+            }
+
+        } else {
+            None
+        };
+
+        let clay_state = if max_resources_produced.clay < max_resources_consumed.clay {
+            let build_time = self.get_time_to_build(blueprint.clay_rb_cost);
+            let new_remaining_time = self.remaining_time.checked_sub(build_time).unwrap_or(0);
+            if new_remaining_time >= 3 {
+                let new_resources = self.current_resources + (self.current_rate * build_time) - blueprint.clay_rb_cost;
+                let new_state = State {
+                    remaining_time: new_remaining_time,
+                    current_resources: new_resources,
+                    current_rate: self.current_rate + Resources::new(0, 1, 0),
+                    geodes: self.geodes
+                };
+
+                Some(new_state)
+
+            } else {
+                None
+            }
+
+        } else {
+            None
+        };
+
+        let obs_state = if self.current_rate.clay > 0 && max_resources_produced.obs < max_resources_consumed.obs {
+            let build_time = self.get_time_to_build(blueprint.obs_rb_cost);
+            let new_remaining_time = self.remaining_time.checked_sub(build_time).unwrap_or(0);
+            if new_remaining_time >= 2 {
+                let new_resources = self.current_resources + (self.current_rate * build_time) - blueprint.obs_rb_cost;
+                let new_state = State {
+                    remaining_time: new_remaining_time,
+                    current_resources: new_resources,
+                    current_rate: self.current_rate+ Resources::new(0, 0, 1),
+                    geodes: self.geodes
+                };
+
+                Some(new_state)
+
+            } else {
+                None
+            }
+
+        } else {
+            None
+        };
+
+        geode_state.into_iter()
+        .chain(ore_state)
+        .chain(clay_state)
+        .chain(obs_state)
+    }
+
+}
+
 struct Blueprint {
     ore_rb_cost: Resources,
     clay_rb_cost: Resources,
@@ -155,111 +302,22 @@ impl Blueprint {
         }
     }
 
-    fn simulate_blueprint<const ITERATION_COUNT: u8>(&self) -> u64 {
-        self.max_geodes(
-            ITERATION_COUNT,
-            Resources::new(0, 0, 0),
-            Resources::new(1, 0, 0))
+    fn simulate_blueprint<const ITERATION_COUNT: u16>(&self) -> u64 {
+        let mut best_count = 0;
+        self.run_simulation(
+            State::initial_state(ITERATION_COUNT as u16),
+            &mut best_count);
+
+        best_count
     }
 
-    fn get_time_to_build(cur_goods: Resources, cur_rate: Resources, rb_cost: Resources) -> u16 {
-        let ore_build_time = if cur_goods.ore < rb_cost.ore {
-            div_ceil(rb_cost.ore - cur_goods.ore, cur_rate.ore)
-
-        } else {
-            0
-        };
-        
-        let clay_build_time = if cur_goods.clay < rb_cost.clay {
-            div_ceil(rb_cost.clay - cur_goods.clay, cur_rate.clay)
-
-        } else {
-            0
-        };
-        
-        let obs_build_time = if cur_goods.obs < rb_cost.obs {
-            div_ceil(rb_cost.obs - cur_goods.obs, cur_rate.obs)
-
-        } else {
-            0
-        };
-
-        ore_build_time.max(clay_build_time).max(obs_build_time) + 1
-    }
-
-    fn max_geodes(&self, rem_time: u8, cur_goods: Resources, cur_rate: Resources) -> u64 {
-        if rem_time <= 1 {
-            return 0;
-        }
-
-        let mut max_geodes = 0;
-        if cur_rate.ore > 0 &&
-           cur_rate.obs > 0 {
-
-            let build_time = Self::get_time_to_build(cur_goods, cur_rate, self.geode_rb_cost);
-            if rem_time as u16 > build_time {
-                let new_rem_time = rem_time - (build_time as u8);
-                let new_goods = cur_goods + (cur_rate * build_time) - self.geode_rb_cost;
-
-                let geodes =
-                    self.max_geodes(new_rem_time, new_goods, cur_rate);
-
-                max_geodes = max_geodes.max(geodes + (new_rem_time as u64));
+    fn run_simulation(&self, current_state: State, current_best: &mut u64) {
+        *current_best = (*current_best).max(current_state.geodes);
+        for next_state in current_state.branch(self) {
+            if next_state.get_potential() > *current_best {
+                self.run_simulation(next_state, current_best);
             }
         }
-
-        let next_potential = {
-            let rem_time = rem_time as u64;
-            (rem_time - 1) / 2 * rem_time
-        };
-
-        if next_potential > max_geodes {
-            let max_resources_produced = cur_goods + cur_rate * (rem_time as u16);
-            let max_resources_used = self.max_rb_cost * (rem_time as u16);
-            if max_resources_produced.ore < max_resources_used.ore {
-                let build_time = Self::get_time_to_build(cur_goods, cur_rate, self.ore_rb_cost);
-                if rem_time as u16 > (build_time + 1) {
-                    let new_goods = cur_goods + (cur_rate * build_time) - self.ore_rb_cost;
-                    let new_rate = cur_rate + Resources::new(1, 0, 0);
-
-                    let geodes =
-                        self.max_geodes(rem_time - (build_time as u8), new_goods, new_rate);
-
-                    max_geodes = max_geodes.max(geodes);
-                }
-            }
-
-            if max_resources_produced.clay < max_resources_used.clay {
-                let build_time = Self::get_time_to_build(cur_goods, cur_rate, self.clay_rb_cost);
-                if rem_time as u16 > (build_time + 1) {
-                    let new_goods = cur_goods + (cur_rate * build_time) - self.clay_rb_cost;
-                    let new_rate = cur_rate + Resources::new(0, 1, 0);
-
-                    let geodes =
-                        self.max_geodes(rem_time - (build_time as u8), new_goods, new_rate);
-
-                    max_geodes = max_geodes.max(geodes);
-                }
-            }
-
-            if max_resources_produced.obs < max_resources_used.clay &&
-               cur_rate.ore > 0 &&
-               cur_rate.clay > 0 {
-
-                let build_time = Self::get_time_to_build(cur_goods, cur_rate, self.obs_rb_cost);
-                if rem_time as u16 > (build_time + 1) {
-                    let new_goods = cur_goods + (cur_rate * build_time) - self.obs_rb_cost;
-                    let new_rate = cur_rate + Resources::new(0, 0, 1);
-
-                    let geodes =
-                        self.max_geodes(rem_time - (build_time as u8), new_goods, new_rate);
-
-                    max_geodes = max_geodes.max(geodes);
-                }
-            }
-        }
-
-        max_geodes
     }
 
 }
