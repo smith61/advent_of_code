@@ -1,40 +1,39 @@
-use std::collections::VecDeque;
 
+use crate::utils::Point2D;
 
 fn count_matches(grid: &[&[u8]], r: usize, c: usize, val: &[u8]) -> u64 {
-    let mut search_list = VecDeque::new();
+    let mut count = 0;
     for r_d in -1isize..=1 {
         for r_c in -1isize..=1 {
             if r_d == 0 && r_c == 0 {
                 continue;
             }
 
-            search_list.push_back((r, c, 0, r_d, r_c));
-        }
-    }
+            let mut index = 0;
+            let mut current_pos = Point2D::new(c as isize, r as isize);
+            let pos_d = Point2D::new(r_c, r_d);
+            loop {
+                if current_pos.row() < 0 ||
+                   current_pos.row_index() >= grid.len() ||
+                   current_pos.column() < 0 ||
+                   current_pos.column_index() >= grid[0].len() {
 
-    let mut count = 0;
-    while let Some((r, c, index, r_d, c_d)) = search_list.pop_front() {
-        if grid[r][c] != val[index] {
-            continue;
-        }
+                    break;
+                }
 
-        if index == (val.len() - 1) {
-            count += 1;
-            continue;
-        }
+                if grid[current_pos.row_index()][current_pos.column_index()] != val[index] {
+                    break;
+                }
 
-        let r_n = (r as isize) + r_d;
-        let c_n = (c as isize) + c_d;
-        if r_n < 0 || r_n as usize >= grid.len() {
-            continue;
-        }
+                index += 1;
+                if index >= val.len() {
+                    count += 1;
+                    break;
+                }
 
-        if c_n < 0 || c_n as usize >= grid[0].len() {
-            continue;
+                current_pos += pos_d;
+            }
         }
-
-        search_list.push_back((r_n as usize, c_n as usize, index + 1, r_d, c_d));
     }
 
     count
