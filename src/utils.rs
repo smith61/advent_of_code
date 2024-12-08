@@ -319,6 +319,14 @@ impl<'a, T> DerefMut for Grid2DStorage<'a, T> {
 
 }
 
+pub trait Grid<T: ?Sized> : Index<T> {
+
+    fn col_count(&self) -> usize;
+
+    fn row_count(&self) -> usize;
+
+}
+
 pub struct Grid2DBorrowed<'a> {
     input_bytes: &'a [u8],
     row_count: usize,
@@ -345,15 +353,24 @@ impl<'a> Grid2DBorrowed<'a> {
         }
     }
 
+    pub fn to_owned(&self) -> Grid2D<u8> {
+        Grid2D {
+            storage: self.input_bytes.to_owned(),
+            row_count: self.row_count,
+            col_count: self.col_count,
+            row_stride: self.row_stride
+        }
+    }
+
 }
 
-impl<'a> Grid2DBorrowed<'a> {
+impl<'a> Grid<Point2D> for Grid2DBorrowed<'a> {
 
-    pub fn col_count(&self) -> usize {
+    fn col_count(&self) -> usize {
         self.col_count
     }
 
-    pub fn row_count(&self) -> usize {
+    fn row_count(&self) -> usize {
         self.row_count
     }
 
@@ -372,7 +389,8 @@ impl<'a> Index<Point2D> for Grid2DBorrowed<'a> {
 pub struct Grid2D<T> {
     storage: Vec<T>,
     row_count: usize,
-    col_count: usize
+    col_count: usize,
+    row_stride: usize
 }
 
 impl<T: Copy + Default> Grid2D<T> {
@@ -381,7 +399,8 @@ impl<T: Copy + Default> Grid2D<T> {
         Self {
             storage: vec![T::default(); row_count * col_count],
             row_count,
-            col_count
+            col_count,
+            row_stride: col_count
         }
     }
 
@@ -389,11 +408,23 @@ impl<T: Copy + Default> Grid2D<T> {
 
 impl<T> Grid2D<T> {
 
-    pub fn col_count(&self) -> usize {
+    pub fn backing_store(&self) -> &[T] {
+        &self.storage
+    }
+
+    pub fn backing_store_mut(&mut self) -> &mut [T] {
+        &mut self.storage
+    }
+
+}
+
+impl<T> Grid<Point2D> for Grid2D<T> {
+
+    fn col_count(&self) -> usize {
         self.col_count
     }
 
-    pub fn row_count(&self) -> usize {
+    fn row_count(&self) -> usize {
         self.row_count
     }
 
@@ -404,7 +435,7 @@ impl<T> Index<Point2D> for Grid2D<T> {
     type Output = T;
 
     fn index(&self, index: Point2D) -> &Self::Output {
-        &(*self.storage)[index.row_index() * self.col_count + index.column_index()]
+        &(*self.storage)[index.row_index() * self.row_stride + index.column_index()]
     }
 
 }
@@ -412,7 +443,7 @@ impl<T> Index<Point2D> for Grid2D<T> {
 impl<T> IndexMut<Point2D> for Grid2D<T> {
 
     fn index_mut(&mut self, index: Point2D) -> &mut Self::Output {
-        &mut (*self.storage)[index.row_index() * self.col_count + index.column_index()]
+        &mut (*self.storage)[index.row_index() * self.row_stride + index.column_index()]
     }
 
 }

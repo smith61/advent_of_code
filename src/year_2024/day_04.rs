@@ -1,5 +1,5 @@
 
-use crate::utils::{Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Grid, Grid2DBorrowed, Point2D};
 
 fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
     let mut count = 0;

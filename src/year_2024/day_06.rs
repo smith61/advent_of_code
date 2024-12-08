@@ -1,162 +1,135 @@
 
-use crate::utils::Point2D;
+use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
 
-pub fn part1(input: &str) -> u64 {
-    let grid =
-        input.lines()
-             .map(|l| l.as_bytes())
-             .collect::<Vec<_>>();
+const D_V: [Point2D; 4] = [Point2D::new(0, -1), Point2D::new(1, 0), Point2D::new(0, 1), Point2D::new(-1, 0)];
 
-    let d_v = [Point2D::new(0, -1), Point2D::new(1, 0), Point2D::new(0, 1), Point2D::new(-1, 0)];
+fn can_escape(grid: &impl Grid<Point2D, Output = u8>, mut current_pos: Point2D, mut direction: usize, visited_map: &mut Grid2D<u8>) -> bool {
 
-    let mut current_pos = Point2D::new(0, 0);
-    let mut direction = 0;
-    for r in 0..grid.len() {
-        for c in 0..grid[0].len() {
-            if grid[r][c] == b'^' {
-                current_pos = Point2D::new(c as isize, r as isize);
-                direction = 0;
-
-            } else if grid[r][c] == b'>' {
-                current_pos = Point2D::new(c as isize, r as isize);
-                direction = 1;
-
-            } else if grid[r][c] == b'V' {
-                current_pos = Point2D::new(c as isize, r as isize);
-                direction = 2;
-
-            } else if grid[r][c] == b'<' {
-                current_pos = Point2D::new(c as isize, r as isize);
-                direction = 3;
-            }
-        }
-    }
-
-    let mut visited = vec![vec![false; grid[0].len()]; grid.len()];
-    visited[current_pos.row_index()][current_pos.column_index()] = true;
-
+    visited_map[current_pos] |= 1 << direction;
     loop {
-        let next_pos = current_pos + d_v[direction];
+        let next_pos = current_pos + D_V[direction];
         if next_pos.row() < 0 ||
-           next_pos.row_index() >= grid.len() ||
+           next_pos.row_index() >= grid.row_count() ||
            next_pos.column() < 0 ||
-           next_pos.column_index() >= grid[0].len() {
+           next_pos.column_index() >= grid.col_count() {
 
-            break;
+            return true;
         }
 
-        if grid[next_pos.row_index()][next_pos.column_index()] == b'#' {
+        if grid[next_pos] == b'#' {
             direction = (direction + 1) % 4;
             continue;
         }
 
-        visited[next_pos.row_index()][next_pos.column_index()] = true;
+        if (visited_map[next_pos] & (1 << direction)) != 0 {
+            return false;
+        }
+
+        visited_map[next_pos] |= 1 << direction;
         current_pos = next_pos;
     }
-    
-    visited.iter()
-           .map(|r| r.iter().map(|v| *v as u64).sum::<u64>())
+}
+
+pub fn part1(input: &str) -> u64 {
+    let grid = Grid2DBorrowed::from_input_lines(input);
+
+    let mut current_pos = Point2D::new(0, 0);
+    let mut direction = 0;
+    for r in 0..grid.row_count() {
+        for c in 0..grid.col_count() {
+            let pos = Point2D::new(c as isize, r as isize);
+            if grid[pos] == b'^' {
+                current_pos = pos;
+                direction = 0;
+                break;
+
+            } else if grid[pos] == b'>' {
+                current_pos = pos;
+                direction = 1;
+                break;
+
+            } else if grid[pos] == b'V' {
+                current_pos = pos;
+                direction = 2;
+                break;
+
+            } else if grid[pos] == b'<' {
+                current_pos = pos;
+                direction = 3;
+                break;
+            }
+        }
+    }
+
+    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    assert!(can_escape(&grid, current_pos, direction, &mut visited));
+    visited.backing_store()
+           .iter()
+           .map(|r| (*r != 0) as u64)
            .sum()
 }
 
 pub fn part2(input: &str) -> u64 {
-    let mut grid =
-        input.lines()
-             .map(|l| l.as_bytes().to_owned())
-             .collect::<Vec<_>>();
+    let mut grid = Grid2DBorrowed::from_input_lines(input).to_owned();
 
-    let d_v = [Point2D::new(0, -1), Point2D::new(1, 0), Point2D::new(0, 1), Point2D::new(-1, 0)];
+    let mut current_pos = Point2D::new(0, 0);
+    let mut direction = 0;
+    for r in 0..grid.row_count() {
+        for c in 0..grid.col_count() {
+            let pos = Point2D::new(c as isize, r as isize);
+            if grid[pos] == b'^' {
+                current_pos = pos;
+                direction = 0;
+                break;
 
-    let mut starting_pos = Point2D::new(0, 0);
-    let mut starting_direction = 0;
-    for r in 0..grid.len() {
-        for c in 0..grid[0].len() {
-            if grid[r][c] == b'^' {
-                starting_pos = Point2D::new(c as isize, r as isize);
-                starting_direction = 0;
+            } else if grid[pos] == b'>' {
+                current_pos = pos;
+                direction = 1;
+                break;
 
-            } else if grid[r][c] == b'>' {
-                starting_pos = Point2D::new(c as isize, r as isize);
-                starting_direction = 1;
+            } else if grid[pos] == b'V' {
+                current_pos = pos;
+                direction = 2;
+                break;
 
-            } else if grid[r][c] == b'V' {
-                starting_pos = Point2D::new(c as isize, r as isize);
-                starting_direction = 2;
-
-            } else if grid[r][c] == b'<' {
-                starting_pos = Point2D::new(c as isize, r as isize);
-                starting_direction = 3;
-            }
-        }
-    }
-
-    let mut visited = vec![vec![false; grid[0].len()]; grid.len()];
-    {
-        let mut current_pos = starting_pos;
-        let mut direction = starting_direction;
-        loop {
-            let next_pos = current_pos + d_v[direction];
-            if next_pos.row() < 0 ||
-               next_pos.row_index() >= grid.len() ||
-               next_pos.column() < 0 ||
-               next_pos.column_index() >= grid[0].len() {
-
+            } else if grid[pos] == b'<' {
+                current_pos = pos;
+                direction = 3;
                 break;
             }
-
-            if grid[next_pos.row_index()][next_pos.column_index()] == b'#' {
-                direction = (direction + 1) % 4;
-                continue;
-            }
-
-            visited[next_pos.row_index()][next_pos.column_index()] = true;
-            current_pos = next_pos;
         }
     }
 
+    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut temp_visited = Grid2D::new(grid.row_count(), grid.col_count());
     let mut count = 0;
-    for r in 0..grid.len() {
-        for c in 0..grid[0].len() {
-            let old_value = grid[r][c];
-            if old_value != b'.' &&
-               !visited[r][c] {
+    loop {
+        let next_pos = current_pos + D_V[direction];
+        if next_pos.row() < 0 ||
+           next_pos.row_index() >= grid.row_count() ||
+           next_pos.column() < 0 ||
+           next_pos.column_index() >= grid.col_count() {
 
-                continue;
-            }
-
-            grid[r][c] = b'#';
-
-            let mut current_pos = starting_pos;
-            let mut direction = starting_direction;
-
-            let mut visited = vec![vec![0; grid[0].len()]; grid.len()];
-            loop {
-                if (visited[current_pos.row_index()][current_pos.column_index()] & (1 << direction)) != 0 {
-                    count += 1;
-                    break;
-                }
-
-                visited[current_pos.row_index()][current_pos.column_index()] |= 1 << direction;
-
-                let next_pos = current_pos + d_v[direction];
-                if next_pos.row() < 0 ||
-                   next_pos.row_index() >= grid.len() ||
-                   next_pos.column() < 0 ||
-                   next_pos.column_index() >= grid[0].len() {
-
-                    break;
-                }
-
-                if grid[next_pos.row_index()][next_pos.column_index()] == b'#' {
-                    direction = (direction + 1) % 4;
-                    continue;
-                }
-
-                current_pos = next_pos;
-            }
-
-            grid[r][c] = old_value;
+            break;
         }
+
+        if grid[next_pos] == b'#' {
+            direction = (direction + 1) % 4;
+            continue;
+        }
+
+        if visited[next_pos] == 0 {
+            grid[next_pos] = b'#';
+            temp_visited.backing_store_mut().copy_from_slice(visited.backing_store());
+            if !can_escape(&grid, current_pos, direction, &mut temp_visited) {
+                count += 1;
+            }
+
+            grid[next_pos] = b'.'
+        }
+
+        visited[next_pos] |= 1 << direction;
+        current_pos = next_pos;
     }
     
     count
