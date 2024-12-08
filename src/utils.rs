@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Index, IndexMut, Sub, SubAssign};
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Point2D {
@@ -288,6 +288,133 @@ impl SubAssign<&Point3D> for Point3D {
         self.z -= rhs.z;
     }
     
+}
+
+enum Grid2DStorage<'a, T> {
+    Owned(Vec<T>),
+    Borrowed(&'a [T])
+}
+
+impl<'a, T> Deref for Grid2DStorage<'a, T> {
+
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Grid2DStorage::Owned(v) => &v[..],
+            Grid2DStorage::Borrowed(v) => v
+        }
+    }
+
+}
+
+impl<'a, T> DerefMut for Grid2DStorage<'a, T> {
+
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Grid2DStorage::Owned(v) => &mut v[..],
+            Grid2DStorage::Borrowed(_) => panic!("Can't modify borrowed storage")
+        }
+    }
+
+}
+
+pub struct Grid2DBorrowed<'a> {
+    input_bytes: &'a [u8],
+    row_count: usize,
+    col_count: usize,
+    row_stride: usize
+}
+
+impl<'a> Grid2DBorrowed<'a> {
+
+    pub fn from_input_lines(input: &'a str) -> Self {
+        let bytes = input.as_bytes();
+        let new_line_index =
+            bytes.iter()
+                 .enumerate()
+                 .find(|v| *v.1 == b'\r')
+                 .unwrap().0;
+
+        let row_count = bytes.len() / (new_line_index + 1);
+        Self {
+            input_bytes: bytes,
+            row_count,
+            col_count: new_line_index,
+            row_stride: new_line_index + 2
+        }
+    }
+
+}
+
+impl<'a> Grid2DBorrowed<'a> {
+
+    pub fn col_count(&self) -> usize {
+        self.col_count
+    }
+
+    pub fn row_count(&self) -> usize {
+        self.row_count
+    }
+
+}
+
+impl<'a> Index<Point2D> for Grid2DBorrowed<'a> {
+
+    type Output = u8;
+
+    fn index(&self, index: Point2D) -> &Self::Output {
+        &self.input_bytes[index.row_index() * self.row_stride + index.column_index()]
+    }
+
+}
+
+pub struct Grid2D<T> {
+    storage: Vec<T>,
+    row_count: usize,
+    col_count: usize
+}
+
+impl<T: Copy + Default> Grid2D<T> {
+
+    pub fn new(row_count: usize, col_count: usize) -> Self {
+        Self {
+            storage: vec![T::default(); row_count * col_count],
+            row_count,
+            col_count
+        }
+    }
+
+}
+
+impl<T> Grid2D<T> {
+
+    pub fn col_count(&self) -> usize {
+        self.col_count
+    }
+
+    pub fn row_count(&self) -> usize {
+        self.row_count
+    }
+
+}
+
+impl<T> Index<Point2D> for Grid2D<T> {
+
+    type Output = T;
+
+    fn index(&self, index: Point2D) -> &Self::Output {
+        &(*self.storage)[index.row_index() * self.col_count + index.column_index()]
+    }
+
+}
+
+impl<T> IndexMut<Point2D> for Grid2D<T> {
+
+    fn index_mut(&mut self, index: Point2D) -> &mut Self::Output {
+        &mut (*self.storage)[index.row_index() * self.col_count + index.column_index()]
+    }
+
 }
 
 pub fn gcd(mut u: usize, mut v: usize) -> usize {

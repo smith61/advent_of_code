@@ -1,7 +1,7 @@
 
-use crate::utils::Point2D;
+use crate::utils::{Grid2D, Grid2DBorrowed, Point2D};
 
-fn count_matches(grid: &[&[u8]], r: usize, c: usize, val: &[u8]) -> u64 {
+fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
     let mut count = 0;
     for r_d in -1isize..=1 {
         for r_c in -1isize..=1 {
@@ -14,14 +14,14 @@ fn count_matches(grid: &[&[u8]], r: usize, c: usize, val: &[u8]) -> u64 {
             let pos_d = Point2D::new(r_c, r_d);
             loop {
                 if current_pos.row() < 0 ||
-                   current_pos.row_index() >= grid.len() ||
+                   current_pos.row_index() >= grid.row_count() ||
                    current_pos.column() < 0 ||
-                   current_pos.column_index() >= grid[0].len() {
+                   current_pos.column_index() >= grid.col_count() {
 
                     break;
                 }
 
-                if grid[current_pos.row_index()][current_pos.column_index()] != val[index] {
+                if grid[current_pos] != val[index] {
                     break;
                 }
 
@@ -41,13 +41,9 @@ fn count_matches(grid: &[&[u8]], r: usize, c: usize, val: &[u8]) -> u64 {
 
 pub fn part1(input: &str) -> u64 {
     let mut count = 0;
-    let grid =
-        input.lines()
-             .map(|l| l.as_bytes())
-             .collect::<Vec<_>>();
-
-    for r in 0..grid.len() {
-        for c in 0..grid[r].len() {
+    let grid = Grid2DBorrowed::from_input_lines(input);
+    for r in 0..grid.row_count() {
+        for c in 0..grid.col_count() {
             count += count_matches(&grid, r, c, b"XMAS");
         }
     }
@@ -57,25 +53,27 @@ pub fn part1(input: &str) -> u64 {
 
 pub fn part2(input: &str) -> u64 {
     let mut count = 0;
-    let grid =
-        input.lines()
-             .map(|l| l.as_bytes())
-             .collect::<Vec<_>>();
+    let grid = Grid2DBorrowed::from_input_lines(input);
 
-    for r in 1..grid.len()-1 {
-        for c in 1..grid[r].len()-1 {
-            if grid[r][c] != b'A' {
+    const UP_LEFT: Point2D = Point2D::new(-1, -1);
+    const UP_RIGHT: Point2D = Point2D::new(1, -1);
+    const DOWN_LEFT: Point2D = Point2D::new(-1, 1);
+    const DOWN_RIGHT: Point2D = Point2D::new(1, 1);
+    for r in 1..grid.row_count()-1 {
+        for c in 1..grid.col_count()-1 {
+            let pos = Point2D::new(c as isize, r as isize);
+            if grid[pos] != b'A' {
                 continue;
             }
 
             let mut is_valid = false;
-            if grid[r-1][c-1] == b'M' &&
-               grid[r+1][c+1] == b'S' {
+            if grid[pos + UP_LEFT] == b'M' &&
+               grid[pos + DOWN_RIGHT] == b'S' {
 
                 is_valid = true;
 
-            } else if grid[r-1][c-1] == b'S' &&
-                      grid[r+1][c+1] == b'M' {
+            } else if grid[pos + UP_LEFT] == b'S' &&
+                      grid[pos + DOWN_RIGHT] == b'M' {
 
                 is_valid = true;
             }
@@ -85,13 +83,13 @@ pub fn part2(input: &str) -> u64 {
             }
 
             is_valid = false;
-            if grid[r-1][c+1] == b'M' &&
-               grid[r+1][c-1] == b'S' {
+            if grid[pos + UP_RIGHT] == b'M' &&
+               grid[pos + DOWN_LEFT] == b'S' {
                 
                 is_valid = true;
 
-            } else if grid[r-1][c+1] == b'S' &&
-                      grid[r+1][c-1] == b'M' {
+            } else if grid[pos + UP_RIGHT] == b'S' &&
+                      grid[pos + DOWN_LEFT] == b'M' {
                 
                 is_valid = true;
             }
