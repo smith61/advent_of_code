@@ -8,11 +8,7 @@ fn can_escape(grid: &impl Grid<Point2D, Output = u8>, mut current_pos: Point2D, 
     visited_map[current_pos] |= 1 << direction;
     loop {
         let next_pos = current_pos + D_V[direction];
-        if next_pos.row() < 0 ||
-           next_pos.row_index() >= grid.row_count() ||
-           next_pos.column() < 0 ||
-           next_pos.column_index() >= grid.col_count() {
-
+        if !grid.contains(next_pos) {
             return true;
         }
 
@@ -105,11 +101,7 @@ pub fn part2(input: &str) -> u64 {
     let mut count = 0;
     loop {
         let next_pos = current_pos + D_V[direction];
-        if next_pos.row() < 0 ||
-           next_pos.row_index() >= grid.row_count() ||
-           next_pos.column() < 0 ||
-           next_pos.column_index() >= grid.col_count() {
-
+        if !grid.contains(next_pos) {
             break;
         }
 

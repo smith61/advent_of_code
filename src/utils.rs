@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Add, AddAssign, Deref, DerefMut, Index, IndexMut, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign};
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Point2D {
@@ -290,41 +290,13 @@ impl SubAssign<&Point3D> for Point3D {
     
 }
 
-enum Grid2DStorage<'a, T> {
-    Owned(Vec<T>),
-    Borrowed(&'a [T])
-}
-
-impl<'a, T> Deref for Grid2DStorage<'a, T> {
-
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Grid2DStorage::Owned(v) => &v[..],
-            Grid2DStorage::Borrowed(v) => v
-        }
-    }
-
-}
-
-impl<'a, T> DerefMut for Grid2DStorage<'a, T> {
-
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        match self {
-            Grid2DStorage::Owned(v) => &mut v[..],
-            Grid2DStorage::Borrowed(_) => panic!("Can't modify borrowed storage")
-        }
-    }
-
-}
-
-pub trait Grid<T: ?Sized> : Index<T> {
+pub trait Grid<T: ?Sized>: Index<T> {
 
     fn col_count(&self) -> usize;
 
     fn row_count(&self) -> usize;
 
+    fn contains(&self, point: T) -> bool;
 }
 
 pub struct Grid2DBorrowed<'a> {
@@ -372,6 +344,11 @@ impl<'a> Grid<Point2D> for Grid2DBorrowed<'a> {
 
     fn row_count(&self) -> usize {
         self.row_count
+    }
+    
+    fn contains(&self, point: Point2D) -> bool {
+        return point.row_index() < self.row_count &&
+               point.column_index() < self.col_count
     }
 
 }
@@ -426,6 +403,11 @@ impl<T> Grid<Point2D> for Grid2D<T> {
 
     fn row_count(&self) -> usize {
         self.row_count
+    }
+    
+    fn contains(&self, point: Point2D) -> bool {
+        return point.row_index() < self.row_count &&
+               point.column_index() < self.col_count
     }
 
 }

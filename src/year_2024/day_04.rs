@@ -13,11 +13,7 @@ fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
             let mut current_pos = Point2D::new(c as isize, r as isize);
             let pos_d = Point2D::new(r_c, r_d);
             loop {
-                if current_pos.row() < 0 ||
-                   current_pos.row_index() >= grid.row_count() ||
-                   current_pos.column() < 0 ||
-                   current_pos.column_index() >= grid.col_count() {
-
+                if !grid.contains(current_pos) {
                     break;
                 }
 
