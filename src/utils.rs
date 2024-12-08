@@ -17,6 +17,13 @@ impl Point2D {
         }
     }
 
+    pub fn abs(&self) -> Point2D {
+        Self {
+            x: self.x.abs(),
+            y: self.y.abs()
+        }
+    }
+
     pub fn adjacent_points(&self) -> [Point2D; 4] {
         [
             (-1, 0),
@@ -42,6 +49,21 @@ impl Point2D {
 
     pub fn column_index(&self) -> usize {
         self.x as usize
+    }
+
+    pub fn negate(&self) -> Point2D {
+        Self {
+            x: -self.x,
+            y: -self.y
+        }
+    }
+
+    pub fn normalize(&self) -> Point2D {
+        let gcd = gcd(self.x.abs() as usize, self.y.abs() as usize) as isize;
+        Self {
+            x: self.x / gcd,
+            y: self.y / gcd
+        }
     }
 
     pub fn row(&self) -> isize {
@@ -163,6 +185,14 @@ impl Point3D {
         }
     }
 
+    pub fn abs(&self) -> Point3D {
+        Self {
+            x: self.x.abs(),
+            y: self.y.abs(),
+            z: self.z.abs()
+        }
+    }
+
     pub fn adjacent_points(&self) -> [Point3D; 6] {
         [
             (-1, 0, 0),
@@ -186,6 +216,23 @@ impl Point3D {
 
     pub fn z_index(&self) -> usize {
         self.z as usize
+    }
+
+    pub fn negate(&self) -> Point3D {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z
+        }
+    }
+
+    pub fn normalize(&self) -> Point3D {
+        let gcd = gcd(gcd(self.x.abs() as usize, self.y.abs() as usize), self.z.abs() as usize) as isize;
+        Self {
+            x: self.x / gcd,
+            y: self.y / gcd,
+            z: self.z / gcd
+        }
     }
 
     pub fn manhattan_distance(&self) -> isize {
@@ -297,6 +344,7 @@ pub trait Grid<T: ?Sized>: Index<T> {
     fn row_count(&self) -> usize;
 
     fn contains(&self, point: T) -> bool;
+
 }
 
 pub struct Grid2DBorrowed<'a> {
