@@ -54,12 +54,17 @@ impl Display for AocResult {
 
 }
 
-pub fn get_input(aoc_year: &str, aoc_day: &str) -> String {
+pub fn get_input(aoc_year: &str, aoc_day: &str, example_input: bool) -> String {
     let mut path = std::env::current_dir().unwrap();
     path.push("input");
     path.push(aoc_year);
     path.push(aoc_day);
-    path.push("input.txt");
+    if example_input {
+        path.push("example.txt");
+
+    } else {
+        path.push("input.txt");
+    }
 
     if !path.is_file() {
         panic!("Failed to find input file at {:?}", path);

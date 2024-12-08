@@ -46,6 +46,15 @@ aoc_solvers!{
         day_23,
         day_24,
         day_25
+    },
+    year_2024 {
+        day_01,
+        day_02,
+        day_03,
+        day_04,
+        day_05,
+        day_06,
+        day_07
     }
 }
 
@@ -75,7 +84,10 @@ struct RunCommand {
     year: Option<String>,
 
     #[arg(short, long, requires = "year")]
-    day: Option<String>
+    day: Option<String>,
+
+    #[arg(short, long)]
+    example: bool
 }
 
 fn run_solver(aoc_day: &AocDay, input: &str) -> Duration {
@@ -134,7 +146,7 @@ fn aoc_main(aoc_years: &[AocYear]) {
                     total_duration +=
                         run_solver(
                             aoc_day,
-                            &get_input(aoc_year.year, aoc_day.day));
+                            &get_input(aoc_year.year, aoc_day.day, args.example));
                 }
             }
 
