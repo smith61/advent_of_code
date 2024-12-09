@@ -1,5 +1,3 @@
-use std::{cmp::Reverse, collections::BinaryHeap, time::Instant, u64};
-
 
 pub fn part1(input: &str) -> u64 {
     let input = input.trim().as_bytes();
