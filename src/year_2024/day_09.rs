@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, collections::BinaryHeap};
+use std::{cmp::Reverse, collections::BinaryHeap, time::Instant, u64};
 
 
 pub fn part1(input: &str) -> u64 {
@@ -59,59 +59,83 @@ pub fn part2(input: &str) -> u64 {
         block_id: u64
     }
 
-    let mut file_blocks = Vec::new();
-    let mut free_blocks = [0; 10].map(|_| BinaryHeap::default());
-    let mut is_free_block = false;
-    let mut block_id = 0;
+    impl Block {
+
+        fn checksum(&self, size: usize) -> u64 {
+            let mut value = 0;
+            for idx in 0..size {
+                value += (self.disk_offset + idx) as u64 * self.block_id;
+            }
+    
+            value
+        }
+
+    }
+
+    let input = input.trim().as_bytes();
+
+    let mut file_blocks = [0; 10].map(|_| Vec::with_capacity(input.len() / 2));
+
     let mut disk_offset = 0;
-    for c in input.bytes() {
-        let size = (c - b'0') as usize;
-        if is_free_block {
-            free_blocks[size].push(Reverse(disk_offset));
+    for (block_id, chunk) in input.chunks(2).enumerate() {
+        let block_size = (chunk[0] - b'0') as usize;
 
-        } else {
-            file_blocks.push(Block {
-                disk_offset,
-                block_size: size,
-                block_id: block_id
-            });
+        file_blocks[block_size].push(Block {
+            disk_offset,
+            block_size,
+            block_id: block_id as u64
+        });
 
-            block_id += 1;
+        disk_offset += block_size;
+        if chunk.len() == 2 {
+            disk_offset += (chunk[1] - b'0') as usize;
         }
-
-        is_free_block = !is_free_block;
-        disk_offset += size;
     }
 
-    for file_index in (0..file_blocks.len()).rev() {
-        let file_block = &mut file_blocks[file_index];
+    let mut value = 0;
+    disk_offset = 0;
+    for chunk in input.chunks_exact(2) {
+        disk_offset += (chunk[0] - b'0') as usize;
         
-        let free_block =
-            (file_block.block_size..10)
-                .flat_map(|size| free_blocks[size].peek().map(|&Reverse(v)| (v, size)))
-                .min();
-
-        if let Some((disk_offset, free_size)) = free_block {
-            if disk_offset >= file_block.disk_offset {
-                continue;
-            }
-            
-            file_block.disk_offset = disk_offset;
-            free_blocks[free_size].pop();
-            if free_size > file_block.block_size {
-                free_blocks[free_size - file_block.block_size].push(Reverse(disk_offset + file_block.block_size));
-            }
-        }
-    }
-
-    file_blocks.iter()
-               .map(|block| {
-                    let mut value = 0;
-                    for idx in 0..block.block_size {
-                        value += (block.disk_offset + idx) as u64 * block.block_id;
+        let mut free_block_size = (chunk[1] - b'0') as usize;
+        loop {
+            let mut block_size = 0;
+            let mut block_disk_offset = 0;
+            for size in 1..=free_block_size {
+                if let Some(block) = file_blocks[size].last() {
+                    if block.disk_offset <= disk_offset {
+                        continue;
                     }
 
-                    value
-               })
-               .sum()
+                    if block.disk_offset >= block_disk_offset {
+                        block_disk_offset = block.disk_offset;
+                        block_size = size;
+                    }
+                }
+            }
+
+            if block_size == 0 {
+                break;
+            }
+
+            let mut file_block = file_blocks[block_size].pop().unwrap();
+            file_block.disk_offset = disk_offset;
+            disk_offset += file_block.block_size;
+            free_block_size -= file_block.block_size;
+            value += file_block.checksum(block_size);
+        }
+
+        disk_offset += free_block_size;
+    }
+
+    value +=
+        file_blocks
+            .iter()
+            .enumerate()
+            .map(|(block_size, fbs)| {
+                fbs.iter().map(|block| block.checksum(block_size)).sum::<u64>()
+            })
+            .sum::<u64>();
+
+    value
 }
