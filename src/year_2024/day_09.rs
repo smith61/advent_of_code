@@ -2,55 +2,54 @@ use std::{cmp::Reverse, collections::BinaryHeap};
 
 
 pub fn part1(input: &str) -> u64 {
-    let mut blocks = Vec::new();
-    let mut free_block = false;
-    let mut block_id = 0;
-    for c in input.bytes() {
-        let size = c - b'0';
-        for _ in 0..size {
-            if free_block {
-                blocks.push(u64::MAX);
+    let input = input.trim().as_bytes();
+    let right = (input.len() - 1) & !1;
 
-            } else {
-                blocks.push(block_id);
+    let mut trail_block = (right / 2, input[right] - b'0');
+    let mut free_block = (0, input[1] - b'0');
+
+    let mut disk_offset = 0;
+    let mut value = 0;
+    let mut checksum = |id: usize, mut length: u8| {
+        while length > 0 {
+            value += (id as u64) * disk_offset;
+            length -= 1;
+            disk_offset += 1;
+        }
+    };
+
+    checksum(0, input[0] - b'0');
+    while free_block.0 < trail_block.0 {
+        if trail_block.1 == 0 {
+            let new_id = trail_block.0 - 1;
+            if new_id <= free_block.0 {
+                break;
             }
-        }
 
-        if !free_block {
-            block_id += 1;
-        }
-
-        free_block = !free_block
-    }
-
-
-    let mut left = 0;
-    let mut right = blocks.len() - 1;
-    while left < right {
-        if blocks[left] != u64::MAX {
-            left += 1;
+            trail_block = (new_id, input[new_id * 2 + 0] - b'0');
             continue;
         }
 
-        if blocks[right] == u64::MAX {
-            right -= 1;
+        if free_block.1 == 0 {
+            let new_id = free_block.0 + 1;
+            if new_id >= trail_block.0 {
+                break;
+            }
+
+            checksum(new_id, input[new_id * 2 + 0] - b'0');
+            free_block = (new_id, input[new_id * 2 + 1] - b'0');
             continue;
         }
 
-        blocks[left] = blocks[right];
-        blocks[right] = u64::MAX;
+        let move_size = free_block.1.min(trail_block.1);
+        checksum(trail_block.0, move_size);
+        free_block.1 -= move_size;
+        trail_block.1 -= move_size;
     }
 
-    blocks.iter()
-          .enumerate()
-          .map(|(idx, v)| {
-            if *v != u64::MAX {
-                (idx as u64) * *v
-            } else {
-                0
-            }
-          })
-          .sum()
+    checksum(trail_block.0, trail_block.1);
+
+    value
 }
 
 pub fn part2(input: &str) -> u64 {
