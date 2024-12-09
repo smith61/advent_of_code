@@ -1,3 +1,5 @@
+use std::{time::Instant, u64};
+
 
 pub fn part1(input: &str) -> u64 {
     let mut blocks = Vec::new();
@@ -52,54 +54,72 @@ pub fn part1(input: &str) -> u64 {
 }
 
 pub fn part2(input: &str) -> u64 {
-    let mut free_block = true;
-    let mut blocks =
-        input.bytes()
-             .enumerate()
-             .map(|(idx, c)| {
-                free_block = !free_block;
-                ((idx / 2) as u64, (c - b'0') as u64, free_block)
-             })
-             .collect::<Vec<_>>();
+    struct Block {
+        disk_offset: u64,
+        block_size: u64,
+        block_id: u64
+    }
 
-    for offset in 0..blocks.len() {
-        let right = blocks.len() - offset - 1;
-        let block = blocks[right];
-        if block.2 {
+    let mut file_blocks = Vec::new();
+    let mut free_blocks = Vec::new();
+    let mut is_free_block = false;
+    let mut block_id = 0;
+    let mut disk_offset = 0;
+    for c in input.bytes() {
+        let size = (c - b'0') as u64;
+        if is_free_block {
+            free_blocks.push(Block {
+                disk_offset,
+                block_size: size,
+                block_id: u64::MAX
+            });
+
+        } else {
+            file_blocks.push(Block {
+                disk_offset,
+                block_size: size,
+                block_id: block_id
+            });
+
+            block_id += 1;
+        }
+
+        is_free_block = !is_free_block;
+        disk_offset += size;
+    }
+
+    for file_index in (0..file_blocks.len()).rev() {
+        let file_block = &mut file_blocks[file_index];
+
+        let mut free_index = 0;
+        while free_index < free_blocks.len() {
+            if free_blocks[free_index].block_size >= file_block.block_size {
+                break;
+            }
+
+            free_index += 1;
+        }
+
+        if (free_index >= free_blocks.len()) ||
+           (free_blocks[free_index].disk_offset >= file_block.disk_offset) {
+
             continue;
         }
 
-        for left in 0..right {
-            if !blocks[left].2 ||
-                blocks[left].1 < block.1 {
-
-                continue;
-            }
-
-            blocks[left].1 -= block.1;
-            blocks[right].2 = true;
-            blocks.insert(left, block);
-            break;
-        }
+        let free_block = &mut free_blocks[free_index];
+        file_block.disk_offset = free_block.disk_offset;
+        free_block.disk_offset += file_block.block_size;
+        free_block.block_size -= file_block.block_size;
     }
 
-    let mut offset = 0;
-    blocks.iter()
-            .map(|(idx, size, free_block)| {
-                let val = if *free_block {
-                    0
-
-                } else {
-                    let mut val = 0;
-                    for i in 0..*size {
-                        val += (offset + i) * *idx;
+    file_blocks.iter()
+               .map(|block| {
+                    let mut value = 0;
+                    for idx in 0..block.block_size {
+                        value += (block.disk_offset + idx) * block.block_id;
                     }
 
-                    val
-                };
-
-                offset += *size;
-                val
-            })
-            .sum()
+                    value
+               })
+               .sum()
 }
