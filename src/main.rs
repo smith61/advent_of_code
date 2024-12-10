@@ -56,7 +56,8 @@ aoc_solvers!{
         day_06,
         day_07,
         day_08,
-        day_09
+        day_09,
+        day_10
     }
 }
 
