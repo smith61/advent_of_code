@@ -16,7 +16,6 @@ pub fn part1(input: &str) -> u64 {
                 continue;
             }
             
-            visited.backing_store_mut().fill(false);
             visited[point] = true;
             queue.push_back(point);
             while let Some(pos) = queue.pop_front() {
@@ -24,6 +23,8 @@ pub fn part1(input: &str) -> u64 {
                 if current_val == b'9' {
                     value += 1;
                 }
+
+                visited[pos] = false;
 
                 for next_pos in pos.adjacent_points() {
                     if !grid.contains(next_pos) ||
