@@ -41,46 +41,33 @@ fn try_split_digits(number: u64) -> Option<(u64, u64)> {
     }
 }
 
-fn count_stones(number: u64, current_depth: u8, seen_values: &mut FxHashMap<(u64, u8), u64>) -> u64 {
-    if current_depth == 0 {
-        return 1;
-    }
-
-    let key = (number, current_depth);
-    if let Some(&cached_value) = seen_values.get(&key) {
-        return cached_value;
-    }
-
-    let number_of_stones = if number == 0 {
-        count_stones(1, current_depth - 1, seen_values)
-
-    } else if let Some((left, right)) = try_split_digits(number) {
-        count_stones(left, current_depth - 1, seen_values) + count_stones(right, current_depth - 1, seen_values)
-
-    } else {
-        count_stones(number * 2024, current_depth - 1, seen_values)
-    };
-
-    seen_values.insert(key, number_of_stones);
-    number_of_stones
-}
-
 fn solve<const DEPTH: u8>(input: &str) -> u64 {
-    let input = input.trim();
-    
-    let mut seen_values = FxHashMap::default();
-    if DEPTH == 25 {
-        seen_values.reserve(5000);
+    let mut current_map = FxHashMap::default();
+    let mut next_map = FxHashMap::default();
 
-    } else {
-        seen_values.reserve(200000);
+    for number in input.trim().split(" ").map(|p| p.parse::<u64>().unwrap()) {
+        *current_map.entry(number).or_default() += 1;
     }
 
-    input.trim()
-         .split(" ")
-         .map(|p| p.parse::<u64>().unwrap())
-         .map(|number| count_stones(number, DEPTH, &mut seen_values))
-         .sum::<u64>()
+    for _ in 0..DEPTH {
+        next_map.clear();
+        for (&key, &value) in &current_map {
+            if key == 0 {
+                *next_map.entry(1).or_default() += value;
+
+            } else if let Some((left, right)) = try_split_digits(key) {
+                *next_map.entry(left).or_default() += value;
+                *next_map.entry(right).or_default() += value;
+
+            } else {
+                *next_map.entry(key * 2024).or_default() += value;
+            }
+        }
+
+        std::mem::swap(&mut current_map, &mut next_map);
+    }
+
+    current_map.values().sum::<u64>()
 }
 
 pub fn part1(input: &str) -> u64 {
