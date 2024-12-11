@@ -1,87 +1,63 @@
+use std::{cmp::Ordering, str::FromStr};
 
-pub fn part1(input: &str) -> u64 {
-    let mut lines = input.lines();
+fn parse<T: FromStr>(string: &str) -> T {
+    string.parse::<T>().unwrap_or_else(|_| panic!("Failed to parse input value"))
+}
 
-    let mut rules = Vec::new();
+fn solve<const COUNT_VALIDS: bool>(input: &str) -> u64 {
+    let mut lines = input.trim().lines();
+
+    let mut invalid_orders = [[false; 256]; 256];
     while let Some(rule) = lines.next() {
         if rule.is_empty() {
             break;
         }
 
         let mut parts = rule.split("|");
-        rules.push((parts.next().unwrap().parse::<u64>().unwrap(),parts.next().unwrap().parse::<u64>().unwrap()));
+        let (left, right) = (parse::<usize>(parts.next().unwrap()), parse::<usize>(parts.next().unwrap()));
+        invalid_orders[right][left] = true;
     }
 
     let mut count = 0;
     for order in lines {
-        let order =
+        let orig_order =
             order.split(",")
-                 .map(|v| v.parse::<u64>().unwrap())
+                 .map(|v| parse::<usize>(v))
                  .collect::<Vec<_>>();
 
-        let mut is_valid = true;
-        for (left, right) in rules.iter() {
-            if let Some((l_i, _)) = order.iter().enumerate().find(|v| v.1 == left) {
-                if let Some((r_i, _)) = order.iter().enumerate().find(|v| v.1 == right) {
-                    if l_i > r_i {
-                        is_valid = false;
-                        break;
-                    }
-                }
+        let mut sorted_order = orig_order.clone();
+        sorted_order.sort_unstable_by(|&left, &right| {
+            if left == right {
+                return Ordering::Equal;
             }
-        }
 
-        if is_valid {
-            count += order[order.len() / 2];
+            if invalid_orders[left][right] {
+                return Ordering::Greater;
+
+            } else {
+                return Ordering::Less;
+            }
+        });
+
+        if COUNT_VALIDS {
+            if orig_order == sorted_order {
+                count += sorted_order[sorted_order.len() / 2] as u64;
+            }
+
+        } else {
+            if orig_order != sorted_order {
+                count += sorted_order[sorted_order.len() / 2] as u64;
+            }
         }
     }
 
     count
 }
 
+pub fn part1(input: &str) -> u64 {
+    solve::<true>(input)
+}
+
 pub fn part2(input: &str) -> u64 {
-    let mut lines = input.lines();
-
-    let mut rules = Vec::new();
-    while let Some(rule) = lines.next() {
-        if rule.is_empty() {
-            break;
-        }
-
-        let mut parts = rule.split("|");
-        rules.push((parts.next().unwrap().parse::<u64>().unwrap(),parts.next().unwrap().parse::<u64>().unwrap()));
-    }
-
-    let mut count = 0;
-    for order in lines {
-        let mut order =
-            order.split(",")
-                 .map(|v| v.parse::<u64>().unwrap())
-                 .collect::<Vec<_>>();
-
-        let mut is_valid = false;
-        let mut had_change = true;
-        while had_change {
-            had_change = false;
-            for (left, right) in rules.iter() {
-                if let Some((l_i, _)) = order.iter().enumerate().find(|v| v.1 == left) {
-                    if let Some((r_i, _)) = order.iter().enumerate().find(|v| v.1 == right) {
-                        if l_i > r_i {
-                            is_valid = true;
-
-                            order.insert(l_i + 1, *right);
-                            order.remove(r_i);
-                            had_change = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        if is_valid {
-            count += order[order.len() / 2];
-        }
-    }
-
-    count
+    solve::<false>(input)
 }
