@@ -2,167 +2,122 @@ use std::collections::VecDeque;
 
 use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
 
-fn get_cost(starting_point: Point2D, grid: &impl Grid<Point2D, Output = u8>, visited: &mut Grid2D<bool>) -> u64 {
-    let mut queue = VecDeque::new();
-    queue.push_back(starting_point);
+fn get_number_of_corners(point: Point2D, grid: &impl Grid<Point2D, Output = u8>) -> u64 {
+    let mut number_of_corners = 0;
 
-    let mut area = 0;
-    let mut perimeter = 0;
-    visited[starting_point] = true;
-    while let Some(point) = queue.pop_front() {
-        area += 1;
-        for adj in point.adjacent_points() {
-            if !grid.contains(adj) {
-                perimeter += 1;
-                continue;
-            }
+    let mut matches = [[false; 3]; 3];
 
-            if grid[adj] == grid[point] {
-                if !visited[adj] {
-                    visited[adj] = true;
-                    queue.push_back(adj);
-                }
-
-            } else {
-                perimeter += 1;
-            }
+    let value = grid[point];
+    for r_d in 0..3 {
+        for c_d in 0..3 {
+            let compare_point = point + Point2D::new(c_d as isize - 1, r_d as isize - 1);
+            matches[r_d][c_d] = grid.contains(compare_point) && grid[compare_point] == value;
         }
     }
 
-    area * perimeter
-}
+    if matches[0][1] {
+        if matches[1][0] &&
+           !matches[0][0] {
 
-fn matches(i: Point2D, j: Point2D, grid: &impl Grid<Point2D, Output = u8>) -> bool {
-    grid.contains(i) &&
-    grid.contains(j) &&
-    grid[i] == grid[j]
-}
+            number_of_corners += 1;
+        }
 
-fn corner_count(point: Point2D, grid: &impl Grid<Point2D, Output = u8>) -> u64 {
-    let mut num_corners = 0;
+        if matches[1][2] &&
+           !matches[0][2] {
 
-    const UP: Point2D = Point2D::new(0, -1);
-    const RIGHT: Point2D = Point2D::new(1, 0);
-    const DOWN: Point2D = Point2D::new(0, 1);
-    const LEFT: Point2D = Point2D::new(-1, 0);
+            number_of_corners += 1;
+        }
 
-    if matches(point, point + UP, grid) &&
-       matches(point, point + LEFT, grid) &&
-       !matches(point, point + UP + LEFT, grid) {
+    } else {
+        if !matches[1][0] {
+            number_of_corners += 1;
+        }
 
-        num_corners += 1;
-    }
-
-    if matches(point, point + UP, grid) &&
-       matches(point, point + RIGHT, grid) &&
-       !matches(point, point + UP + RIGHT, grid) {
-
-        num_corners += 1;
-    }
-
-    if matches(point, point + DOWN, grid) &&
-       matches(point, point + RIGHT, grid) &&
-       !matches(point, point + DOWN + RIGHT, grid) {
-
-        num_corners += 1;
-    }
-
-    if matches(point, point + DOWN, grid) &&
-       matches(point, point + LEFT, grid) &&
-       !matches(point, point + DOWN + LEFT, grid) {
-
-        num_corners += 1;
-    }
-
-    if !matches(point, point + UP, grid) &&
-       !matches(point, point + LEFT, grid) {
-        
-        num_corners += 1;
-    }
-
-    if !matches(point, point + UP, grid) &&
-       !matches(point, point + RIGHT, grid) {
-        
-        num_corners += 1;
-    }
-
-    if !matches(point, point + DOWN, grid) &&
-       !matches(point, point + LEFT, grid) {
-        
-        num_corners += 1;
-    }
-
-    if !matches(point, point + DOWN, grid) &&
-       !matches(point, point + RIGHT, grid) {
-        
-        num_corners += 1;
-    }
-
-    num_corners
-}
-
-fn get_cost2(starting_point: Point2D, grid: &impl Grid<Point2D, Output = u8>, visited: &mut Grid2D<bool>) -> u64 {
-    let mut queue = VecDeque::new();
-    queue.push_back(starting_point);
-
-    let mut area = 0;
-    let mut side_count = 0;
-    visited[starting_point] = true;
-    while let Some(point) = queue.pop_front() {
-        area += 1;
-        side_count += corner_count(point, grid);
-        for adj in point.adjacent_points() {
-            if !grid.contains(adj) {
-                continue;
-            }
-
-            if grid[adj] == grid[point] {
-                if !visited[adj] {
-                    visited[adj] = true;
-                    queue.push_back(adj);
-                }
-
-            }
+        if !matches[1][2] {
+            number_of_corners += 1;
         }
     }
 
-    area * side_count
+    if matches[2][1] {
+        if matches[1][2] &&
+           !matches[2][2] {
+
+            number_of_corners += 1;
+        }
+
+        if matches[1][0] &&
+           !matches[2][0] {
+
+            number_of_corners += 1;
+        }
+
+    } else {
+        if !matches[1][0] {
+            number_of_corners += 1;
+        }
+
+        if !matches[1][2] {
+            number_of_corners += 1;
+        }
+    }
+
+    number_of_corners
+}
+
+fn solve<const COUNT_PERIMETER: bool>(input: &str) -> u64 {
+    let grid = Grid2DBorrowed::from_input_lines(input);
+    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut queue = VecDeque::with_capacity(32);
+
+    let mut cost = 0;
+    for r in 0..grid.row_count() {
+        for c in 0..grid.col_count() {
+            let starting_point = Point2D::new(c as isize, r as isize);
+            if visited[starting_point] {
+                continue;
+            }
+
+            let starting_value = grid[starting_point];
+
+            let mut area = 0;
+            let mut edge_cost = 0;
+            queue.push_back(starting_point);
+            visited[starting_point] = true;
+            while let Some(current_point) = queue.pop_front() {
+                area += 1;
+                if !COUNT_PERIMETER {
+                    edge_cost += get_number_of_corners(current_point, &grid);
+                }
+
+                for adjacent_point in current_point.adjacent_points() {
+                    if !grid.contains(adjacent_point) {
+                        if COUNT_PERIMETER {
+                            edge_cost += 1;
+                        }
+
+                    } else if grid[adjacent_point] == starting_value {
+                        if !visited[adjacent_point] {
+                            visited[adjacent_point] = true;
+                            queue.push_back(adjacent_point);
+                        }
+
+                    } else if COUNT_PERIMETER {
+                        edge_cost += 1;
+                    }
+                }
+            }
+
+            cost += area * edge_cost;
+        }
+    }
+
+    cost
 }
 
 pub fn part1(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
-
-    let mut cost = 0;
-    for r in 0..grid.row_count() {
-        for c in 0..grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
-            if visited[point] {
-                continue;
-            }
-
-            cost += get_cost(point, &grid, &mut visited);
-        }
-    }
-    
-    cost
+    solve::<true>(input)
 }
 
 pub fn part2(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
-    
-    let mut cost = 0;
-    for r in 0..grid.row_count() {
-        for c in 0..grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
-            if visited[point] {
-                continue;
-            }
-
-            cost += get_cost2(point, &grid, &mut visited);
-        }
-    }
-
-    cost
+    solve::<false>(input)
 }
