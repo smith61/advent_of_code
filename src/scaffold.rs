@@ -93,13 +93,13 @@ macro_rules! aoc_solvers {
 
                         #[bench]
                         fn bench_part_1(b: &mut Bencher) {
-                            let input = $crate::scaffold::get_input(stringify!($year), stringify!($day));
+                            let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
                             b.iter(|| std::hint::black_box($crate::$year::$day::part1(&input)));
                         }
 
                         #[bench]
                         fn bench_part_2(b: &mut Bencher) {
-                            let input = $crate::scaffold::get_input(stringify!($year), stringify!($day));
+                            let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
                             b.iter(|| std::hint::black_box($crate::$year::$day::part2(&input)));
                         }
                     }
