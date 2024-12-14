@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::{Add, AddAssign, Index, IndexMut, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign};
 
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Point2D {
@@ -120,6 +120,50 @@ impl AddAssign<&Point2D> for Point2D {
     fn add_assign(&mut self, rhs: &Point2D) {
         self.x += rhs.x;
         self.y += rhs.y;
+    }
+
+}
+
+impl Mul<isize> for Point2D {
+
+    type Output = Point2D;
+
+    fn mul(self, rhs: isize) -> Self::Output {
+        Point2D {
+            x: self.x * rhs,
+            y: self.y * rhs
+        }
+    }
+
+}
+
+impl Mul<&isize> for Point2D {
+
+    type Output = Point2D;
+
+    fn mul(self, rhs: &isize) -> Self::Output {
+        Point2D {
+            x: self.x * rhs,
+            y: self.y * rhs
+        }
+    }
+
+}
+
+impl MulAssign<isize> for Point2D {
+
+    fn mul_assign(&mut self, rhs: isize) {
+        self.x *= rhs;
+        self.y *= rhs;
+    }
+
+}
+
+impl MulAssign<&isize> for Point2D {
+
+    fn mul_assign(&mut self, rhs: &isize) {
+        self.x *= rhs;
+        self.y *= rhs;
     }
 
 }
@@ -357,19 +401,33 @@ pub struct Grid2DBorrowed<'a> {
 impl<'a> Grid2DBorrowed<'a> {
 
     pub fn from_input_lines(input: &'a str) -> Self {
-        let bytes = input.as_bytes();
-        let new_line_index =
-            bytes.iter()
-                 .enumerate()
-                 .find(|v| *v.1 == b'\r')
-                 .unwrap().0;
+        let bytes = input.trim().as_bytes();
+        let (row_length, line_escape_length) = {
+            let mut index = 0;
+            let line_escape_length;
+            loop {
+                if bytes[index] == b'\r' {
+                    line_escape_length = 2;
+                    break;
 
-        let row_count = bytes.len() / (new_line_index + 1);
+                } else if bytes[index] == b'\n' {
+                    line_escape_length = 1;
+                    break;
+                }
+
+                index += 1;
+            }
+
+            (index, line_escape_length)
+        };
+
+        assert!((bytes.len() % (row_length + line_escape_length)) == row_length);
+
         Self {
             input_bytes: bytes,
-            row_count,
-            col_count: new_line_index,
-            row_stride: new_line_index + 2
+            row_count: bytes.len().div_ceil(row_length + line_escape_length),
+            col_count: row_length,
+            row_stride: row_length + line_escape_length
         }
     }
 
