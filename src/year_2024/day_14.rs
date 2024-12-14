@@ -106,7 +106,7 @@ pub fn part2(mut input: InputParser) -> u64 {
     }
 
     let mut grid = Grid2D::new(GRID_HEIGHT as usize, GRID_WIDTH as usize);
-    for i in 1..8490 {
+    for i in 1.. {
         for &(position, _) in &robots {
             grid[position] = false;
         }
