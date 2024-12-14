@@ -1,6 +1,8 @@
 
 use std::fmt::Display;
 
+use crate::utils::Grid2DBorrowed;
+
 pub struct AocYear {
     pub year: &'static str,
     pub days: &'static [AocDay]
@@ -8,14 +10,117 @@ pub struct AocYear {
 
 pub struct AocDay {
     pub day: &'static str,
-    pub part_1: fn(&str) -> AocResult,
-    pub part_2: fn(&str) -> AocResult
+    pub part_1: fn(InputParser) -> AocResult,
+    pub part_2: fn(InputParser) -> AocResult
 }
 
 pub enum AocResult {
     I64(i64),
     U64(u64),
     String(String)
+}
+
+pub struct InputParser<'a> {
+    input_str: &'a [u8]
+}
+
+impl<'a> InputParser<'a> {
+
+    pub fn new(input_str: &'a str) -> Self {
+        Self {
+            input_str: input_str.as_bytes()
+        }
+    }
+    
+    pub fn next_int(&mut self) -> Option<isize> {
+        loop {
+            if self.input_str.is_empty() {
+                return None;
+            }
+
+            let mut sign = 1;
+            if self.input_str[0] == b'-' {
+                sign = -1;
+                self.input_str = &self.input_str[1..];
+                if self.input_str.is_empty() {
+                    return None;
+                }
+            }
+
+            if !self.input_str[0].is_ascii_digit() {
+                self.input_str = &self.input_str[1..];
+                continue;
+            }
+
+            let mut value = 0;
+            while !self.input_str.is_empty() &&
+                  self.input_str[0].is_ascii_digit() {
+
+                value = (value * 10) + ((self.input_str[0] - b'0') as isize);
+                self.input_str = &self.input_str[1..];
+            }
+
+            return Some(value * sign);
+        }
+    }
+
+    pub fn next_ints<const COUNT: usize>(&mut self) -> Option<[isize; COUNT]> {
+        let mut values = [0; COUNT];
+        for index in 0..COUNT {
+            values[index] = self.next_int()?;
+        }
+
+        Some(values)
+    }
+
+    pub fn next_uint(&mut self) -> Option<u64> {
+        while !self.input_str.is_empty() &&
+              !self.input_str[0].is_ascii_digit() {
+
+            self.input_str = &self.input_str[1..];
+        }
+
+        if !self.input_str.is_empty() {
+            let mut value = 0;
+            while !self.input_str.is_empty() &&
+                  self.input_str[0].is_ascii_digit() {
+
+                value = (value * 10) + ((self.input_str[0] - b'0') as u64);
+                self.input_str = &self.input_str[1..];
+            }
+
+            Some(value)
+
+        } else {
+            None
+        }
+    }
+
+    pub fn next_uints<const COUNT: usize>(&mut self) -> Option<[u64; COUNT]> {
+        let mut values = [0; COUNT];
+        for index in 0..COUNT {
+            values[index] = self.next_uint()?;
+        }
+
+        Some(values)
+    }
+
+}
+
+impl<'a> From<InputParser<'a>> for &'a str {
+
+    fn from(value: InputParser<'a>) -> Self {
+        std::str::from_utf8(value.input_str).unwrap()
+    }
+
+}
+
+impl<'a> From<InputParser<'a>> for Grid2DBorrowed<'a> {
+
+    fn from(value: InputParser<'a>) -> Self {
+        Grid2DBorrowed::from_input_lines(std::str::from_utf8(value.input_str).unwrap())
+    }
+
 }
 
 impl From<i64> for AocResult {
@@ -94,13 +199,13 @@ macro_rules! aoc_solvers {
                         #[bench]
                         fn bench_part_1(b: &mut Bencher) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part1(&input)));
+                            b.iter(|| std::hint::black_box($crate::$year::$day::part1($crate::scaffold::InputParser::new(&input).into())));
                         }
 
                         #[bench]
                         fn bench_part_2(b: &mut Bencher) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part2(&input)));
+                            b.iter(|| std::hint::black_box($crate::$year::$day::part2($crate::scaffold::InputParser::new(&input).into())));
                         }
                     }
                 )*
@@ -117,15 +222,15 @@ macro_rules! aoc_solvers {
                                 $crate::scaffold::AocDay {
                                     day: stringify!($day),
                                     part_1: {
-                                        fn wrapper(input: &str) -> AocResult {
-                                            $crate::scaffold::AocResult::from($crate::$year::$day::part1(input))
+                                        fn wrapper(input: $crate::scaffold::InputParser) -> AocResult {
+                                            $crate::scaffold::AocResult::from($crate::$year::$day::part1(input.into()))
                                         }
 
                                         wrapper
                                     },
                                     part_2: {
-                                        fn wrapper(input: &str) -> AocResult {
-                                            $crate::scaffold::AocResult::from($crate::$year::$day::part2(input))
+                                        fn wrapper(input: $crate::scaffold::InputParser) -> AocResult {
+                                            $crate::scaffold::AocResult::from($crate::$year::$day::part2(input.into()))
                                         }
 
                                         wrapper

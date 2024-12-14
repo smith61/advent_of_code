@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use crate::scaffold::{AocDay, AocResult, AocYear, get_input};
 
 use clap::*;
+use scaffold::InputParser;
 
 aoc_solvers!{
     year_2015 {
@@ -96,10 +97,10 @@ struct RunCommand {
     example: bool
 }
 
-fn run_solver(aoc_day: &AocDay, input: &str) -> Duration {
+fn run_solver(aoc_day: &AocDay, input: String) -> Duration {
     let part_1 = {
         let start = Instant::now();
-        let answer = (aoc_day.part_1)(&input);
+        let answer = (aoc_day.part_1)(InputParser::new(&input));
         let end = Instant::now();
 
         (answer, end - start)
@@ -107,7 +108,7 @@ fn run_solver(aoc_day: &AocDay, input: &str) -> Duration {
 
     let part_2 = {
         let start = Instant::now();
-        let answer = (aoc_day.part_2)(&input);
+        let answer = (aoc_day.part_2)(InputParser::new(&input));
         let end = Instant::now();
 
         (answer, end - start)
@@ -152,7 +153,7 @@ fn aoc_main(aoc_years: &[AocYear]) {
                     total_duration +=
                         run_solver(
                             aoc_day,
-                            &get_input(aoc_year.year, aoc_day.day, args.example));
+                            get_input(aoc_year.year, aoc_day.day, args.example));
                 }
             }
 
