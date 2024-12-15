@@ -1,43 +1,10 @@
 
-use crate::{scaffold::InputParser, utils::{Grid, Grid2D, Grid2DBorrowed, Point2D}};
+use std::isize;
+
+use crate::{scaffold::InputParser, utils::Point2D};
 
 const GRID_WIDTH: isize = 101;
 const GRID_HEIGHT: isize = 103;
-
-const MATCHING_GRID_INPUT: &'static str = 
-"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-X.............................X
-X.............................X
-X.............................X
-X.............................X
-X..............X..............X
-X.............XXX.............X
-X............XXXXX............X
-X...........XXXXXXX...........X
-X..........XXXXXXXXX..........X
-X............XXXXX............X
-X...........XXXXXXX...........X
-X..........XXXXXXXXX..........X
-X.........XXXXXXXXXXX.........X
-X........XXXXXXXXXXXXX........X
-X..........XXXXXXXXX..........X
-X.........XXXXXXXXXXX.........X
-X........XXXXXXXXXXXXX........X
-X.......XXXXXXXXXXXXXXX.......X
-X......XXXXXXXXXXXXXXXXX......X
-X........XXXXXXXXXXXXX........X
-X.......XXXXXXXXXXXXXXX.......X
-X......XXXXXXXXXXXXXXXXX......X
-X.....XXXXXXXXXXXXXXXXXXX.....X
-X....XXXXXXXXXXXXXXXXXXXXX....X
-X.............XXX.............X
-X.............XXX.............X
-X.............XXX.............X
-X.............................X
-X.............................X
-X.............................X
-X.............................X
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 
 pub fn part1(mut input: InputParser) -> u64 {
     let mut count = [0; 4];
@@ -73,60 +40,69 @@ pub fn part1(mut input: InputParser) -> u64 {
     count[0] * count[1] * count[2] * count[3]
 }
 
-fn contains_tree(grid: &Grid2D<bool>) -> bool {
-    let matching_grid = Grid2DBorrowed::from_input_lines(MATCHING_GRID_INPUT);
-    for r_g in 0..(grid.row_count() - matching_grid.row_count()) {
-        for c_g in 0..(grid.col_count() - matching_grid.col_count()) {
-
-            let mut found_match = true;
-            'outer: for r in 0..matching_grid.row_count() {
-                for c in 0..matching_grid.col_count() {
-                    let mg_point = Point2D::new(c as isize, r as isize);
-                    let grid_point = Point2D::new((c_g + c) as isize, (r_g + r) as isize);
-                    found_match = (matching_grid[mg_point] == b'X') == grid[grid_point];
-                    if !found_match {
-                        break 'outer;
-                    }
-                }
-            }
-
-            if found_match {
-                return true;
-            }
-        }
-    }
-
-    false
-}
-
 pub fn part2(mut input: InputParser) -> u64 {
     let mut robots = Vec::new();
-    while let Some(ints) = input.next_ints::<4>() {
-        robots.push((Point2D::new(ints[0], ints[1]), Point2D::new(ints[2], ints[3])));
+    while let Some(points) = input.next_point2ds::<2>() {
+        robots.push((points[0], points[1]));
     }
 
-    let mut grid = Grid2D::new(GRID_HEIGHT as usize, GRID_WIDTH as usize);
-    for i in 1.. {
-        for &(position, _) in &robots {
-            grid[position] = false;
-        }
-        
-        let mut has_duplicates = false;
-        for (position, vector) in &mut robots {
-            position.x = (position.x + vector.x).rem_euclid(GRID_WIDTH);
-            position.y = (position.y + vector.y).rem_euclid(GRID_HEIGHT);
-            if grid[*position] {
-                has_duplicates = true;
+    let mut distance_xs_min = (isize::MAX, isize::MAX);
+    let mut distance_ys_min = (isize::MAX, isize::MAX);
+    for iteration in 0..(GRID_HEIGHT.max(GRID_WIDTH)) {
+        let mut average_xs = 0;
+        let mut average_ys = 0;
+        for (position, _) in &mut robots {
+            if iteration < GRID_WIDTH {
+                average_xs += position.x;
+            }
 
-            } else {
-                grid[*position] = true;
+            if iteration < GRID_HEIGHT {
+                average_ys += position.y;
             }
         }
 
-        if !has_duplicates && contains_tree(&grid) {
-            return i;
+        if iteration < GRID_WIDTH {
+            average_xs /= robots.len() as isize;
+        }
+
+        if iteration < GRID_HEIGHT {
+            average_ys /= robots.len() as isize;
+        }
+
+        let mut distance_xs = 0;
+        let mut distance_ys = 0;
+        for (position, vector) in &mut robots {
+            if iteration < GRID_WIDTH {
+                distance_xs += (position.x - average_xs).abs();
+            }
+
+            if iteration < GRID_HEIGHT {
+                distance_ys += (position.y - average_ys).abs();
+            }
+
+            position.x = (position.x + vector.x).rem_euclid(GRID_WIDTH);
+            position.y = (position.y + vector.y).rem_euclid(GRID_HEIGHT);
+        }
+
+        if iteration < GRID_WIDTH {
+            if distance_xs < distance_xs_min.0 {
+                distance_xs_min = (distance_xs, iteration);
+            }
+        }
+
+        if iteration < GRID_HEIGHT {
+            if distance_ys < distance_ys_min.0 {
+                distance_ys_min = (distance_ys, iteration);
+            }
         }
     }
 
-    unreachable!();
+    for scale in 0.. {
+        let iteration = GRID_WIDTH * scale + distance_xs_min.1;
+        if (iteration % GRID_HEIGHT) == distance_ys_min.1 {
+            return iteration as u64;
+        }
+    }
+
+    panic!("Did not find correct iteration.");
 }

@@ -1,7 +1,7 @@
 
 use std::fmt::Display;
 
-use crate::utils::Grid2DBorrowed;
+use crate::utils::{Grid2DBorrowed, Point2D};
 
 pub struct AocYear {
     pub year: &'static str,
@@ -20,6 +20,7 @@ pub enum AocResult {
     String(String)
 }
 
+#[derive(Clone, Copy)]
 pub struct InputParser<'a> {
     input_str: &'a [u8]
 }
@@ -100,6 +101,19 @@ impl<'a> InputParser<'a> {
         let mut values = [0; COUNT];
         for index in 0..COUNT {
             values[index] = self.next_uint()?;
+        }
+
+        Some(values)
+    }
+
+    pub fn next_point2d(&mut self) -> Option<Point2D> {
+        Some(Point2D::new(self.next_int()?, self.next_int()?))
+    }
+
+    pub fn next_point2ds<const COUNT: usize>(&mut self) -> Option<[Point2D; COUNT]> {
+        let mut values = [Point2D::default(); COUNT];
+        for index in 0..COUNT {
+            values[index] = self.next_point2d()?;
         }
 
         Some(values)
