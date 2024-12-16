@@ -52,17 +52,24 @@ fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
             continue;
         }
 
-        if cost > minimum_cost {
+        if cost >= minimum_cost {
             continue;
         }
 
         let next_position = position + DIRECTIONS[direction];
         if input_grid[next_position] != b'#' {
-            queue.push(Reverse((cost + 1, next_position, direction)));
+            if grid_costs[next_position][direction] >= (cost + 1) {
+                queue.push(Reverse((cost + 1, next_position, direction)));
+            }
         }
 
-        queue.push(Reverse((cost + 1000, position, (direction + 1) % 4)));
-        queue.push(Reverse((cost + 1000, position, (direction + 3) % 4)));
+        if grid_costs[position][(direction + 1) % 4] >= (cost + 1000) {
+            queue.push(Reverse((cost + 1000, position, (direction + 1) % 4)));
+        }
+        
+        if grid_costs[position][(direction + 3) % 4] >= (cost + 1000) {
+            queue.push(Reverse((cost + 1000, position, (direction + 3) % 4)));
+        }
     }
 
     assert!(!PART1);
