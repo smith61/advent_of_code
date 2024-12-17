@@ -84,7 +84,12 @@ fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
     let mut visited: Grid2D<bool> = Grid2D::new(input_grid.row_count(), input_grid.col_count());
     let mut visited_count = 0;
     while let Some((minimum_cost, position, direction)) = backtrack.pop_front() {
+        if grid_costs[position][direction] == u64::MAX {
+            continue;
+        }
+
         assert_eq!(grid_costs[position][direction], minimum_cost);
+        grid_costs[position][direction] = u64::MAX;
 
         if !visited[position] {
             visited[position] = true;
