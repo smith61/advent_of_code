@@ -63,22 +63,123 @@ pub fn part1(mut input: InputParser) -> String {
     output
 }
 
-fn calculate_reg_a(current_reg_a: u64, output_index: usize, output: &[u64]) -> Option<u64> {
+fn assert_valid_program(program: &[u8]) {
+    if program.len() < 4 ||
+       (program.len() % 2) != 0 {
+
+        panic!("Incorrect program length");
+    }
+
+    if !program.ends_with(&[5, 5, 3, 0]) {
+        panic!("Program does not end with 'out b, jnz 0'");
+    }
+
+    let mut reg_a_shifted = false;
+    let mut reg_b_initialized = false;
+    let mut reg_c_initialized = false;
+    for pair in program[..(program.len() - 4)].chunks_exact(2) {
+        let op = pair[0];
+        let param = if (op == 1) || (op == 3) {
+            pair[1]
+
+        } else if pair[1] == 4 {
+            0
+
+        } else if pair[1] == 5 {
+            if !reg_b_initialized {
+                panic!("Attempted to use unitialized register b");
+            }
+
+            0
+
+        } else if pair[1] == 6 {
+            if !reg_c_initialized {
+                panic!("Attempted to use unitialized register c");
+            }
+
+            0
+
+        } else {
+            pair[1]
+        };
+
+        match op {
+            0 => {
+                if reg_a_shifted {
+                    panic!("Attempted to shift register a multiple times.");
+                }
+
+                reg_a_shifted = true;
+                if param != 3 {
+                    panic!("Attempted to shift register a by value other than 3");
+                }
+            },
+            1 => reg_b_initialized = true,
+            2 => reg_b_initialized = true,
+            3 => {
+                panic!("Program contains unexpected 'jnz'")
+            },
+            4 => reg_b_initialized = true,
+            5 => {
+                panic!("Program contains unexpected 'out'.")
+            },
+            6 => reg_b_initialized = true,
+            7 => reg_c_initialized = true,
+            op => panic!("Invalid opcode {}", op)
+        }
+    }
+}
+
+fn simulate_single_iteration(mut reg_a: u64, program: &[u8]) -> u8 {
+    let mut reg_b = 0;
+    let mut reg_c = 0;
+
+    for pair in program[..(program.len() - 4)].chunks_exact(2) {
+        let op = pair[0];
+        let param = if op == 1 {
+            pair[1] as u64
+
+        } else if pair[1] == 4 {
+            reg_a
+
+        } else if pair[1] == 5 {
+            reg_b
+
+        } else if pair[1] == 6 {
+            reg_c
+
+        } else {
+            pair[1] as u64
+        };
+
+        match op {
+            0 => reg_a >>= param,
+            1 => reg_b ^= param,
+            2 => reg_b = param % 8,
+            4 => reg_b ^= reg_c,
+            6 => reg_b = reg_a >> param,
+            7 => reg_c = reg_a >> param,
+            op => panic!("Invalid opcode {}", op)
+        }
+    }
+
+    (reg_b % 8) as u8
+}
+
+fn calculate_reg_a(current_reg_a: u64, program: &[u8], output_index: usize) -> Option<u64> {
     for bit in 0..8 {
         let reg_a = (current_reg_a << 3) | bit;
-        
-        let mut reg_b = reg_a % 8;
-        reg_b ^= 1;
-        let reg_c = reg_a >> reg_b;
-        reg_b ^= 4;
-        reg_b ^= reg_c;
-        if (reg_b % 8) == output[output_index] {
-            if output_index == 0 {
-                return Some(reg_a);
+        let result = simulate_single_iteration(reg_a, program);
 
-            } else if let Some(reg_a) = calculate_reg_a(reg_a, output_index - 1, output) {
-                return Some(reg_a);
-            }
+        if result != program[output_index] {
+            continue;
+        }
+
+        if output_index == 0 {
+            return Some(reg_a);
+
+        } else if let Some(reg_a) = calculate_reg_a(reg_a, program, output_index - 1) {
+            return Some(reg_a);
         }
     }
 
@@ -90,8 +191,9 @@ pub fn part2(mut input: InputParser) -> u64 {
 
     let mut program = Vec::new();
     while let Some(val) = input.next_uint() {
-        program.push(val);
+        program.push(val as u8);
     }
 
-    calculate_reg_a(0, program.len() - 1, &program).unwrap()
+    assert_valid_program(&program);
+    calculate_reg_a(0, &program, program.len() - 1).unwrap()
 }
