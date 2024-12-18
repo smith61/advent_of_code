@@ -4,6 +4,8 @@ use std::collections::VecDeque;
 use crate::{scaffold::InputParser, utils::{Grid, Grid2D, Point2D}};
 
 const GRID_SIZE: usize = 71;
+const LEFT: Point2D = Point2D::new(-1, 0);
+const UP: Point2D = Point2D::new(0, -1);
 
 pub fn part1(mut input: InputParser) -> u64 {
     let mut bytes = Vec::new();
@@ -47,59 +49,119 @@ pub fn part1(mut input: InputParser) -> u64 {
         std::mem::swap(&mut queue, &mut next_queue);
     }
 
-    unimplemented!();
+    unreachable!();
 }
 
-pub fn part2(mut input: InputParser) -> String {
-    let mut bytes = Vec::new();
+struct UnionFindGrid {
+    backing_grid: Grid2D<usize>
+}
+
+impl UnionFindGrid {
+
+    pub fn new(row_count: usize, col_count: usize) -> Self {
+        let mut this = Self {
+            backing_grid: Grid2D::new(row_count, col_count)
+        };
+
+        for r in 0..row_count {
+            for c in 0..col_count {
+                let point = Point2D::new(c as isize, r as isize);
+                this.backing_grid[point] = this.point_to_index(point);
+            }
+        }
+
+        this
+    }
+
+    pub fn add_relation(&mut self, point_1: Point2D, point_2: Point2D) {
+        let point_1_root = self.get_root(point_1);
+        let point_2_root = self.get_root(point_2);
+        if point_1_root != point_2_root {
+            let orig_root = self.index_to_point(point_1_root);
+            self.backing_grid[orig_root] = point_2_root;
+        }
+    }
+
+    pub fn get_root(&mut self, point: Point2D) -> usize {
+        if self.backing_grid[point] != self.point_to_index(point) {
+            let parent = self.index_to_point(self.backing_grid[point]);
+            let root = self.get_root(parent);
+            self.backing_grid[point] = root;
+        }
+
+        self.backing_grid[point]
+    }
+
+    fn point_to_index(&self, point: Point2D) -> usize {
+        assert!(self.backing_grid.contains(point));
+
+        point.row_index() * self.backing_grid.col_count() + point.column_index()
+    }
+
+    fn index_to_point(&self, index: usize) -> Point2D {
+        let row_index = index / self.backing_grid.col_count();
+        let col_index = index % self.backing_grid.col_count();
+
+        Point2D::new(col_index as isize, row_index as isize)
+    }
+
+}
+
+pub fn part2(mut input: InputParser) -> Point2D {
+    let mut corrupted_bytes = Vec::new();
+    let mut corrupted_bytes_grid = Grid2D::new(GRID_SIZE, GRID_SIZE);
     while let Some(pair) = input.next_ints::<2>() {
-        bytes.push(Point2D::new(pair[0], pair[1]));
+        let point = Point2D::new(pair[0], pair[1]);
+        corrupted_bytes.push(point);
+        corrupted_bytes_grid[point] = true;
     }
 
-    let mut grid = Grid2D::<bool>::new(GRID_SIZE, GRID_SIZE);
-    let mut visited = Grid2D::<bool>::new(grid.row_count(), grid.col_count());
-    let mut queue = VecDeque::new();
-    for index in 0..bytes.len() {
-        grid[bytes[index]] = true;
-        if index != 0 {
-            if !visited[bytes[index]] {
+    let mut grid = UnionFindGrid::new(GRID_SIZE, GRID_SIZE);
+    for r in 0..GRID_SIZE {
+        for c in 0..GRID_SIZE {
+            let grid_point = Point2D::new(c as isize, r as isize);
+            if corrupted_bytes_grid[grid_point] {
                 continue;
             }
 
-            visited.backing_store_mut().fill(false);
-        }
+            let left_point = grid_point + LEFT;
+            if corrupted_bytes_grid.contains(left_point) &&
+               !corrupted_bytes_grid[left_point] {
 
-        let start_point = Point2D::new(0, 0);
-        let end_point = Point2D::new((grid.row_count() - 1) as isize, (grid.col_count() - 1) as isize);
-
-        queue.clear();
-        queue.push_back((start_point, 0));
-
-        let mut found_exit = false;
-        while let Some((point, cost)) = queue.pop_front() {
-            if point == end_point {
-                found_exit = true;
-                break;
+                grid.add_relation(grid_point, left_point);
             }
 
-            if visited[point] {
-                continue;
+            let up_point = grid_point + UP;
+            if corrupted_bytes_grid.contains(up_point) &&
+               !corrupted_bytes_grid[up_point] {
+
+                grid.add_relation(grid_point, up_point);
             }
-
-            visited[point] = true;
-            for adj in point.adjacent_points() {
-                if !grid.contains(adj) || grid[adj] {
-                    continue;
-                }
-
-                queue.push_back((adj, cost + 1));
-            }
-        }
-
-        if !found_exit {
-            return format!("{},{}", bytes[index].x, bytes[index].y);
         }
     }
 
-    unimplemented!();
+    let start_point = Point2D::new(0, 0);
+    let end_point = Point2D::new((GRID_SIZE - 1) as isize, (GRID_SIZE - 1) as isize);
+
+    assert_ne!(grid.get_root(start_point), grid.get_root(end_point));
+
+    for index in (0..corrupted_bytes.len()).rev() {
+        let corrupted_byte = corrupted_bytes[index];
+        corrupted_bytes_grid[corrupted_byte] = false;
+        for adjacent in corrupted_byte.adjacent_points() {
+            if !corrupted_bytes_grid.contains(adjacent) ||
+                corrupted_bytes_grid[adjacent] {
+
+                continue;
+            }
+
+            grid.add_relation(corrupted_byte, adjacent);
+        }
+
+        if grid.get_root(start_point) == grid.get_root(end_point) {
+            return corrupted_byte;
+        }
+    }
+
+    unreachable!();
 }

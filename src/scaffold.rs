@@ -17,7 +17,8 @@ pub struct AocDay {
 pub enum AocResult {
     I64(i64),
     U64(u64),
-    String(String)
+    String(String),
+    Point2D(Point2D)
 }
 
 #[derive(Clone, Copy)]
@@ -161,13 +162,22 @@ impl From<String> for AocResult {
 
 }
 
+impl From<Point2D> for AocResult {
+
+    fn from(inner: Point2D) -> Self {
+        AocResult::Point2D(inner)
+    }
+
+}
+
 impl Display for AocResult {
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AocResult::I64(val) => write!(f, "{}", val),
             AocResult::U64(val) => write!(f, "{}", val),
-            AocResult::String(val) => write!(f, "{}", val)
+            AocResult::String(val) => write!(f, "{}", val),
+            AocResult::Point2D(val) => write!(f, "{},{}", val.x, val.y)
         }
     }
 
