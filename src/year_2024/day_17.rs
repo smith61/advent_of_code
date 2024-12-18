@@ -64,7 +64,7 @@ pub fn part1(mut input: InputParser) -> String {
 }
 
 fn assert_valid_program(program: &[u8]) {
-    if program.len() < 4 ||
+    if program.len() < 2 ||
        (program.len() % 2) != 0 {
 
         panic!("Incorrect program length");
@@ -77,7 +77,8 @@ fn assert_valid_program(program: &[u8]) {
     let mut reg_a_shifted = false;
     let mut reg_b_initialized = false;
     let mut reg_c_initialized = false;
-    for pair in program[..(program.len() - 4)].chunks_exact(2) {
+    let mut reg_outputted = false;
+    for pair in program[..(program.len() - 2)].chunks_exact(2) {
         let op = pair[0];
         let param = if (op == 1) || (op == 3) {
             pair[1]
@@ -121,20 +122,28 @@ fn assert_valid_program(program: &[u8]) {
             },
             4 => reg_b_initialized = true,
             5 => {
-                panic!("Program contains unexpected 'out'.")
+                if reg_outputted {
+                    panic!("Program contains unexpected 'out'.")
+                }
+                
+                reg_outputted = true;
             },
             6 => reg_b_initialized = true,
             7 => reg_c_initialized = true,
             op => panic!("Invalid opcode {}", op)
         }
     }
+
+    assert!(reg_outputted);
+    assert!(reg_a_shifted);
 }
 
 fn simulate_single_iteration(mut reg_a: u64, program: &[u8]) -> u8 {
     let mut reg_b = 0;
     let mut reg_c = 0;
+    let mut output = 0;
 
-    for pair in program[..(program.len() - 4)].chunks_exact(2) {
+    for pair in program[..(program.len() - 2)].chunks_exact(2) {
         let op = pair[0];
         let param = if op == 1 {
             pair[1] as u64
@@ -157,13 +166,14 @@ fn simulate_single_iteration(mut reg_a: u64, program: &[u8]) -> u8 {
             1 => reg_b ^= param,
             2 => reg_b = param % 8,
             4 => reg_b ^= reg_c,
+            5 => output = param,
             6 => reg_b = reg_a >> param,
             7 => reg_c = reg_a >> param,
             op => panic!("Invalid opcode {}", op)
         }
     }
 
-    (reg_b % 8) as u8
+    (output % 8) as u8
 }
 
 fn calculate_reg_a(current_reg_a: u64, program: &[u8], output_index: usize) -> Option<u64> {
