@@ -1,12 +1,12 @@
 
-use crate::utils::Point2D;
+use crate::utils::Vector2;
 
 use std::cmp;
 
 use fxhash::FxHashSet;
 use itertools::Itertools;
 
-fn parse_input(input: &str) -> FxHashSet<Point2D> {
+fn parse_input(input: &str) -> FxHashSet<Vector2> {
     input
         .lines()
         .enumerate()
@@ -17,13 +17,13 @@ fn parse_input(input: &str) -> FxHashSet<Point2D> {
             .enumerate()
             .filter(|(_, b)| **b == b'#')
             .map(move |(x, _)| {
-                Point2D::new(x as isize, y as isize)
+                Vector2::new(x as isize, y as isize)
             })
         })
         .collect::<FxHashSet<_>>()
 }
 
-fn run_simulation<const MAX_ITERATIONS: u64>(positions: &mut FxHashSet<Point2D>) -> u64 {
+fn run_simulation<const MAX_ITERATIONS: u64>(positions: &mut FxHashSet<Vector2>) -> u64 {
     let mut search_order = [
         [(0, -1), (1, -1), (-1, -1)],
         [(0, 1), (1, 1), (-1, 1)],
@@ -36,12 +36,13 @@ fn run_simulation<const MAX_ITERATIONS: u64>(positions: &mut FxHashSet<Point2D>)
     while iteration_count <= MAX_ITERATIONS {
         let mut moved_elf = false;
         for &current_pos in positions.iter() {
-            let Point2D {x, y} = current_pos;
+            let x = current_pos.x();
+            let y = current_pos.y();
 
             let move_elf =
                 (-1..=1).cartesian_product(-1..=1)
                 .filter(|&(d_x, d_y)| d_x != 0 || d_y != 0)
-                .any(|(d_x, d_y)| positions.contains(&Point2D::new(x + d_x, y + d_y)));
+                .any(|(d_x, d_y)| positions.contains(&Vector2::new(x + d_x, y + d_y)));
 
             moved_elf |= move_elf;
 
@@ -53,12 +54,12 @@ fn run_simulation<const MAX_ITERATIONS: u64>(positions: &mut FxHashSet<Point2D>)
                         order
                         .iter()
                         .all(|(d_x, d_y)| {
-                            !positions.contains(&Point2D::new(x + d_x, y + d_y))
+                            !positions.contains(&Vector2::new(x + d_x, y + d_y))
                         })
                     });
 
                 if let Some(order) = order {
-                    Point2D::new(x + order[0].0, y + order[0].1)
+                    Vector2::new(x + order[0].0, y + order[0].1)
 
                 } else {
                     current_pos
@@ -99,11 +100,11 @@ pub fn part1(input: &str) -> u64 {
     let mut min_y = isize::MAX;
     let mut max_x = isize::MIN;
     let mut max_y = isize::MIN;
-    for &Point2D { x, y } in &positions {
-        min_x = cmp::min(x, min_x);
-        min_y = cmp::min(y, min_y);
-        max_x = cmp::max(x, max_x);
-        max_y = cmp::max(y, max_y);
+    for &point in &positions {
+        min_x = cmp::min(point.x(), min_x);
+        min_y = cmp::min(point.y(), min_y);
+        max_x = cmp::max(point.x(), max_x);
+        max_y = cmp::max(point.y(), max_y);
     }
 
     ((max_x - min_x + 1) * (max_y - min_y + 1) - (positions.len() as isize)) as u64

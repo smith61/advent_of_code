@@ -1,9 +1,9 @@
 
-use crate::utils::Point2D;
+use crate::utils::Vector2;
 
 use ndarray::Array2;
 
-fn to_blizzard_iterator<'a>(input: &'a str) -> impl Iterator<Item = (Point2D, usize)> + 'a {
+fn to_blizzard_iterator<'a>(input: &'a str) -> impl Iterator<Item = (Vector2, usize)> + 'a {
     input
     .lines()
     .enumerate()
@@ -22,47 +22,47 @@ fn to_blizzard_iterator<'a>(input: &'a str) -> impl Iterator<Item = (Point2D, us
                 _ => panic!()
             };
 
-            (Point2D::new(x as isize, y as isize), dir)
+            (Vector2::new(x as isize, y as isize), dir)
         })
     })
 }
 
 fn run_simulation<const ITERATION_COUNT: usize>(input: &str) -> u64 {
     let grid_size =
-        Point2D::new(
+        Vector2::new(
             input.lines().next().unwrap().len() as isize,
             input.lines().count() as isize);
 
-    let x_period = grid_size.x - 2;
-    let y_period = grid_size.y - 2;
+    let x_period = grid_size.x() - 2;
+    let y_period = grid_size.y() - 2;
 
-    let mut start_position = Point2D::new(1, 0);
-    let mut end_position = Point2D::new(grid_size.x - 2, grid_size.y - 1);
+    let mut start_position = Vector2::new(1, 0);
+    let mut end_position = Vector2::new(grid_size.x() - 2, grid_size.y() - 1);
 
-    let mut x_blizzard_pos = Array2::zeros((x_period as usize, grid_size.y as usize));
-    let mut y_blizzard_pos = Array2::zeros((y_period as usize, grid_size.y as usize));
+    let mut x_blizzard_pos = Array2::zeros((x_period as usize, grid_size.y_index()));
+    let mut y_blizzard_pos = Array2::zeros((y_period as usize, grid_size.y_index()));
     for x_time in 0..x_blizzard_pos.nrows() {
-        x_blizzard_pos[[x_time, start_position.y as usize]] = 1 << start_position.x;
-        x_blizzard_pos[[x_time, end_position.y as usize]] = 1 << end_position.x;
+        x_blizzard_pos[[x_time, start_position.y_index()]] = 1 << start_position.x();
+        x_blizzard_pos[[x_time, end_position.y_index()]] = 1 << end_position.x();
 
-        let edge_mask = (1 << (grid_size.x - 1)) - 1 & !1;
+        let edge_mask = (1 << (grid_size.x() - 1)) - 1 & !1;
         for r in 1..x_blizzard_pos.ncols() - 1 {
             x_blizzard_pos[[x_time, r]] = edge_mask;
         }
     }
 
     for y_time in 0..y_blizzard_pos.nrows() {
-        y_blizzard_pos[[y_time, start_position.y as usize]] = 1 << start_position.x;
-        y_blizzard_pos[[y_time, end_position.y as usize]] = 1 << end_position.x;
-        let edge_mask = (1 << (grid_size.x - 1)) - 1 & !1;
+        y_blizzard_pos[[y_time, start_position.y_index()]] = 1 << start_position.x();
+        y_blizzard_pos[[y_time, end_position.y_index()]] = 1 << end_position.x();
+        let edge_mask = (1 << (grid_size.x() - 1)) - 1 & !1;
         for r in 1..y_blizzard_pos.ncols() - 1 {
             y_blizzard_pos[[y_time, r]] = edge_mask;
         }
     }
 
-    let mut blizzard_masks = Array2::<u128>::zeros((4, grid_size.y as usize) );
-    for (Point2D { x, y }, dir) in to_blizzard_iterator(input) {
-        blizzard_masks[[dir, y as usize]] |= 1 << x;
+    let mut blizzard_masks = Array2::<u128>::zeros((4, grid_size.y_index()) );
+    for (point, dir) in to_blizzard_iterator(input) {
+        blizzard_masks[[dir, point.y_index()]] |= 1 << point.x();
     }
 
     for time in 0..x_blizzard_pos.nrows() {
@@ -116,11 +116,11 @@ fn run_simulation<const ITERATION_COUNT: usize>(input: &str) -> u64 {
     let mut x_index = 0;
     let mut y_index = 0;
     for _ in 1..=ITERATION_COUNT {
-        let mut current_map = vec![0u128; grid_size.y as usize];
-        let mut next_map = vec![0u128; grid_size.y as usize];
-        current_map[start_position.y as usize] = 1 << start_position.x;
+        let mut current_map = vec![0u128; grid_size.y_index()];
+        let mut next_map = vec![0u128; grid_size.y_index()];
+        current_map[start_position.y_index()] = 1 << start_position.x();
         loop {
-            if current_map[end_position.y as usize] & (1 << end_position.x) != 0 {
+            if current_map[end_position.y_index()] & (1 << end_position.x()) != 0 {
                 break;
             }
 
@@ -128,31 +128,31 @@ fn run_simulation<const ITERATION_COUNT: usize>(input: &str) -> u64 {
             // Remove all positions from the current map that are invalid.
             //
 
-            for r in 0..grid_size.y {
-                current_map[r as usize] &= x_blizzard_pos[[x_index as usize, r as usize]];
-                current_map[r as usize] &= y_blizzard_pos[[y_index as usize, r as usize]];
+            for r in 0..grid_size.y_index() {
+                current_map[r] &= x_blizzard_pos[[x_index as usize, r]];
+                current_map[r] &= y_blizzard_pos[[y_index as usize, r]];
             }
 
             //
             // Shuffle the rows of the map up/down.
             //
 
-            for r in 0..(grid_size.y - 1) {
-                next_map[(r + 1) as usize] |= current_map[r as usize];
+            for r in 0..(grid_size.y_index() - 1) {
+                next_map[r + 1] |= current_map[r];
             }
 
-            for r in 1..grid_size.y {
-                next_map[(r - 1) as usize] |= current_map[r as usize];
+            for r in 1..grid_size.y_index() {
+                next_map[r - 1] |= current_map[r];
             }
 
             //
             // Shuffle each row left, right, and no move.
             //
 
-            for r in 0..grid_size.y {
-                next_map[r as usize] |= current_map[r as usize];
-                next_map[r as usize] |= current_map[r as usize] << 1;
-                next_map[r as usize] |= current_map[r as usize] >> 1;
+            for r in 0..grid_size.y_index() {
+                next_map[r] |= current_map[r];
+                next_map[r] |= current_map[r] << 1;
+                next_map[r] |= current_map[r] >> 1;
             }
 
             std::mem::swap(&mut current_map, &mut next_map);

@@ -1,7 +1,7 @@
 
-use crate::utils::{Grid, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Vector2};
 
-fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
+fn count_matches(grid: &Matrix2DBorrowed<u8>, r: usize, c: usize, val: &[u8]) -> u64 {
     let mut count = 0;
     for r_d in -1isize..=1 {
         for r_c in -1isize..=1 {
@@ -10,8 +10,8 @@ fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
             }
 
             let mut index = 0;
-            let mut current_pos = Point2D::new(c as isize, r as isize);
-            let pos_d = Point2D::new(r_c, r_d);
+            let mut current_pos = Vector2::new(c as isize, r as isize);
+            let pos_d = Vector2::new(r_c, r_d);
             loop {
                 if !grid.contains(current_pos) {
                     break;
@@ -35,9 +35,8 @@ fn count_matches(grid: &Grid2DBorrowed, r: usize, c: usize, val: &[u8]) -> u64 {
     count
 }
 
-pub fn part1(input: &str) -> u64 {
+pub fn part1(grid: Matrix2DBorrowed<u8>) -> u64 {
     let mut count = 0;
-    let grid = Grid2DBorrowed::from_input_lines(input);
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
             count += count_matches(&grid, r, c, b"XMAS");
@@ -47,17 +46,16 @@ pub fn part1(input: &str) -> u64 {
     count
 }
 
-pub fn part2(input: &str) -> u64 {
+pub fn part2(grid: Matrix2DBorrowed<u8>) -> u64 {
     let mut count = 0;
-    let grid = Grid2DBorrowed::from_input_lines(input);
 
-    const UP_LEFT: Point2D = Point2D::new(-1, -1);
-    const UP_RIGHT: Point2D = Point2D::new(1, -1);
-    const DOWN_LEFT: Point2D = Point2D::new(-1, 1);
-    const DOWN_RIGHT: Point2D = Point2D::new(1, 1);
+    const UP_LEFT: Vector2 = Vector2::new(-1, -1);
+    const UP_RIGHT: Vector2 = Vector2::new(1, -1);
+    const DOWN_LEFT: Vector2 = Vector2::new(-1, 1);
+    const DOWN_RIGHT: Vector2 = Vector2::new(1, 1);
     for r in 1..grid.row_count()-1 {
         for c in 1..grid.col_count()-1 {
-            let pos = Point2D::new(c as isize, r as isize);
+            let pos = Vector2::new(c as isize, r as isize);
             if grid[pos] != b'A' {
                 continue;
             }

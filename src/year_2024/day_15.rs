@@ -1,11 +1,11 @@
-use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-const LEFT: Point2D = Point2D::new(-1, 0);
-const RIGHT: Point2D = Point2D::new(1, 0);
-const UP: Point2D = Point2D::new(0, -1);
-const DOWN: Point2D = Point2D::new(0, 1);
+const LEFT: Vector2 = Vector2::new(-1, 0);
+const RIGHT: Vector2 = Vector2::new(1, 0);
+const UP: Vector2 = Vector2::new(0, -1);
+const DOWN: Vector2 = Vector2::new(0, 1);
 
-fn part1_try_and_commit_move(grid: &mut Grid2D<u8>, robot_pos: Point2D, direction: Point2D) -> Point2D {
+fn part1_try_and_commit_move(grid: &mut Matrix2DOwned<u8>, robot_pos: Vector2, direction: Vector2) -> Vector2 {
     let next_position = robot_pos + direction;
     if grid[next_position] == b'#' {
         return robot_pos;
@@ -36,13 +36,13 @@ pub fn part1(input: &str) -> u64 {
 
     let end_grid_offset = input.find("\r\n\r\n").or_else(|| input.find("\n\n")).unwrap();
 
-    let mut grid = Grid2DBorrowed::from_input_lines(&input[..end_grid_offset]).to_owned();
+    let mut grid = Matrix2DBorrowed::from_input_lines(&input[..end_grid_offset]).to_owned();
     let instructions = input[end_grid_offset..].trim().as_bytes();
 
-    let mut robot_pos = Point2D::default();
+    let mut robot_pos = Vector2::default();
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if grid[point] == b'@' {
                 robot_pos = point;
             }
@@ -71,7 +71,7 @@ pub fn part1(input: &str) -> u64 {
     let mut score = 0;
     for r in 1..(grid.row_count() - 1) {
         for c in 1..(grid.col_count() - 1) {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if grid[point] == b'O' {
                 score += (100 * r + c) as u64;
             }
@@ -80,7 +80,7 @@ pub fn part1(input: &str) -> u64 {
     score
 }
 
-fn part2_can_move(grid: &Grid2D<u8>, box_position: Point2D, direction: Point2D) -> bool {
+fn part2_can_move(grid: &Matrix2DOwned<u8>, box_position: Vector2, direction: Vector2) -> bool {
     assert_eq!(grid[box_position], b'[');
 
     let next_position = box_position + direction;
@@ -126,7 +126,7 @@ fn part2_can_move(grid: &Grid2D<u8>, box_position: Point2D, direction: Point2D) 
     can_move
 }
 
-fn part2_commit_move(grid: &mut Grid2D<u8>, box_position: Point2D, direction: Point2D) {
+fn part2_commit_move(grid: &mut Matrix2DOwned<u8>, box_position: Vector2, direction: Vector2) {
     assert_eq!(grid[box_position], b'[');
 
     let next_position = box_position + direction;
@@ -177,13 +177,13 @@ fn part2_commit_move(grid: &mut Grid2D<u8>, box_position: Point2D, direction: Po
 pub fn part2(input: &str) -> u64 {
     let end_grid_offset = input.find("\r\n\r\n").or_else(|| input.find("\n\n")).unwrap();
 
-    let starting_grid = Grid2DBorrowed::from_input_lines(&input[..end_grid_offset]);
-    let mut grid = Grid2D::new(starting_grid.row_count(), starting_grid.col_count() * 2);
-    let mut robot_pos = Point2D::default();
+    let starting_grid = Matrix2DBorrowed::from_input_lines(&input[..end_grid_offset]);
+    let mut grid = Matrix2DOwned::new(starting_grid.row_count(), starting_grid.col_count() * 2);
+    let mut robot_pos = Vector2::default();
     for r in 0..starting_grid.row_count() {
         for c in 0..starting_grid.col_count() {
-            let starting_grid_pos = Point2D::new(c as isize, r as isize);
-            let new_grid_pos = Point2D::new((c * 2) as isize, r as isize);
+            let starting_grid_pos = Vector2::new(c as isize, r as isize);
+            let new_grid_pos = Vector2::new((c * 2) as isize, r as isize);
             let replace = match starting_grid[starting_grid_pos] {
                 b'#' => (b'#', b'#'),
                 b'.' => (b'.', b'.'),
@@ -194,6 +194,7 @@ pub fn part2(input: &str) -> u64 {
                 },
                 c => panic!("Unrecognied character '{}'", c as char)
             };
+            
             grid[new_grid_pos] = replace.0;
             grid[new_grid_pos + RIGHT] = replace.1;
         }
@@ -238,7 +239,7 @@ pub fn part2(input: &str) -> u64 {
     let mut score = 0;
     for r in 1..(grid.row_count() - 1) {
         for c in 1..(grid.col_count() - 1) {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if grid[point] == b'[' {
                 score += (100 * r + c) as u64;
             }

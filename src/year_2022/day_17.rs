@@ -1,7 +1,11 @@
 
-use crate::utils::Point2D;
+use crate::utils::Vector2;
 
 use fxhash::FxHashMap;
+
+const LEFT: Vector2 = Vector2::new(-1, 0);
+const RIGHT: Vector2 = Vector2::new(1, 0);
+const UP: Vector2 = Vector2::new(0, -1);
 
 struct Shape {
     mask: u32,
@@ -53,39 +57,39 @@ impl<'a> TowerState<'a> {
         let shape = &self.shapes[self.shape_index];
         self.shape_index = (self.shape_index + 1) % self.shapes.len();
 
-        let mut shape_position = Point2D::new(2, (self.top_index + 3) as isize);
+        let mut shape_position = Vector2::new(2, (self.top_index + 3) as isize);
         let mut grid_mask = 0;
         loop {
             let mut next_position = shape_position;
             match self.input_stream[self.input_index] {
                 b'<' => {
                     if next_position.column_index() > 0 {
-                        next_position.x -= 1;
+                        next_position += LEFT;
                     }
                 },
                 b'>' => {
                     if next_position.column_index() + shape.width < 7 {
-                        next_position.x += 1;
+                        next_position += RIGHT;
                     }
                 },
                 dir => { panic!("Unrecognized direction: {}", dir); }
             }
 
             self.input_index = (self.input_index + 1) % self.input_stream.len();
-            if (grid_mask & (shape.mask >> next_position.x)) != 0 {
+            if (grid_mask & (shape.mask >> next_position.x())) != 0 {
                 next_position = shape_position;
 
             } else {
                 shape_position = next_position;
             }
 
-            if next_position.y == 0 {
+            if next_position.y() == 0 {
                 break;
             }
 
-            next_position.y -= 1;
+            next_position += UP;
             let next_grid_mask = (grid_mask << 8) | (self.grid[next_position.row_index()] as u32);
-            if (next_grid_mask & (shape.mask >> shape_position.x)) != 0 {
+            if (next_grid_mask & (shape.mask >> shape_position.x())) != 0 {
                 break;
             }
 
@@ -93,7 +97,7 @@ impl<'a> TowerState<'a> {
             grid_mask = next_grid_mask;
         }
 
-        grid_mask |= shape.mask >> shape_position.x;
+        grid_mask |= shape.mask >> shape_position.x();
         self.grid[shape_position.row_index()..shape_position.row_index() + 4].copy_from_slice(&grid_mask.to_le_bytes());
         self.top_index = std::cmp::max(self.top_index, shape_position.row_index() + shape.height);
     }

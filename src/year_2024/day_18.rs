@@ -1,26 +1,26 @@
 
 use std::collections::VecDeque;
 
-use crate::{scaffold::InputParser, utils::{Grid, Grid2D, Point2D}};
+use crate::{scaffold::InputParser, utils::{Matrix2DOwned, Vector2}};
 
 const GRID_SIZE: usize = 71;
-const LEFT: Point2D = Point2D::new(-1, 0);
-const UP: Point2D = Point2D::new(0, -1);
+const LEFT: Vector2 = Vector2::new(-1, 0);
+const UP: Vector2 = Vector2::new(0, -1);
 
 pub fn part1(mut input: InputParser) -> u64 {
     let mut bytes = Vec::new();
     while let Some(pair) = input.next_ints::<2>() {
-        bytes.push(Point2D::new(pair[0], pair[1]));
+        bytes.push(Vector2::new(pair[0], pair[1]));
     }
 
-    let mut grid = Grid2D::<bool>::new(GRID_SIZE, GRID_SIZE);
+    let mut grid = Matrix2DOwned::<bool>::new(GRID_SIZE, GRID_SIZE);
     for index in 0..1024.min(bytes.len()) {
         grid[bytes[index]] = true;
     }
 
-    let start_point = Point2D::new(0, 0);
-    let end_point = Point2D::new((grid.row_count() - 1) as isize, (grid.col_count() - 1) as isize);
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let start_point = Vector2::new(0, 0);
+    let end_point = Vector2::new((grid.row_count() - 1) as isize, (grid.col_count() - 1) as isize);
+    let mut visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
     let mut queue = VecDeque::new();
     let mut next_queue = VecDeque::new();
     queue.push_back(start_point);
@@ -53,19 +53,19 @@ pub fn part1(mut input: InputParser) -> u64 {
 }
 
 struct UnionFindGrid {
-    backing_grid: Grid2D<usize>
+    backing_grid: Matrix2DOwned<usize>
 }
 
 impl UnionFindGrid {
 
     pub fn new(row_count: usize, col_count: usize) -> Self {
         let mut this = Self {
-            backing_grid: Grid2D::new(row_count, col_count)
+            backing_grid: Matrix2DOwned::new(row_count, col_count)
         };
 
         for r in 0..row_count {
             for c in 0..col_count {
-                let point = Point2D::new(c as isize, r as isize);
+                let point = Vector2::new(c as isize, r as isize);
                 this.backing_grid[point] = this.point_to_index(point);
             }
         }
@@ -73,7 +73,7 @@ impl UnionFindGrid {
         this
     }
 
-    pub fn add_relation(&mut self, point_1: Point2D, point_2: Point2D) {
+    pub fn add_relation(&mut self, point_1: Vector2, point_2: Vector2) {
         let point_1_root = self.get_root(point_1);
         let point_2_root = self.get_root(point_2);
         if point_1_root != point_2_root {
@@ -82,7 +82,7 @@ impl UnionFindGrid {
         }
     }
 
-    pub fn get_root(&mut self, point: Point2D) -> usize {
+    pub fn get_root(&mut self, point: Vector2) -> usize {
         if self.backing_grid[point] != self.point_to_index(point) {
             let parent = self.index_to_point(self.backing_grid[point]);
             let root = self.get_root(parent);
@@ -92,26 +92,26 @@ impl UnionFindGrid {
         self.backing_grid[point]
     }
 
-    fn point_to_index(&self, point: Point2D) -> usize {
+    fn point_to_index(&self, point: Vector2) -> usize {
         assert!(self.backing_grid.contains(point));
 
         point.row_index() * self.backing_grid.col_count() + point.column_index()
     }
 
-    fn index_to_point(&self, index: usize) -> Point2D {
+    fn index_to_point(&self, index: usize) -> Vector2 {
         let row_index = index / self.backing_grid.col_count();
         let col_index = index % self.backing_grid.col_count();
 
-        Point2D::new(col_index as isize, row_index as isize)
+        Vector2::new(col_index as isize, row_index as isize)
     }
 
 }
 
-pub fn part2(mut input: InputParser) -> Point2D {
+pub fn part2(mut input: InputParser) -> Vector2 {
     let mut corrupted_bytes = Vec::new();
-    let mut corrupted_bytes_grid = Grid2D::new(GRID_SIZE, GRID_SIZE);
+    let mut corrupted_bytes_grid = Matrix2DOwned::new(GRID_SIZE, GRID_SIZE);
     while let Some(pair) = input.next_ints::<2>() {
-        let point = Point2D::new(pair[0], pair[1]);
+        let point = Vector2::new(pair[0], pair[1]);
         corrupted_bytes.push(point);
         corrupted_bytes_grid[point] = true;
     }
@@ -119,7 +119,7 @@ pub fn part2(mut input: InputParser) -> Point2D {
     let mut grid = UnionFindGrid::new(GRID_SIZE, GRID_SIZE);
     for r in 0..GRID_SIZE {
         for c in 0..GRID_SIZE {
-            let grid_point = Point2D::new(c as isize, r as isize);
+            let grid_point = Vector2::new(c as isize, r as isize);
             if corrupted_bytes_grid[grid_point] {
                 continue;
             }
@@ -140,8 +140,8 @@ pub fn part2(mut input: InputParser) -> Point2D {
         }
     }
 
-    let start_point = Point2D::new(0, 0);
-    let end_point = Point2D::new((GRID_SIZE - 1) as isize, (GRID_SIZE - 1) as isize);
+    let start_point = Vector2::new(0, 0);
+    let end_point = Vector2::new((GRID_SIZE - 1) as isize, (GRID_SIZE - 1) as isize);
 
     assert_ne!(grid.get_root(start_point), grid.get_root(end_point));
 

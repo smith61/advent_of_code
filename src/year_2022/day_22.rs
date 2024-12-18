@@ -1,5 +1,5 @@
 
-use crate::utils::{Point2D, gcd};
+use crate::utils::{Vector2, gcd};
 
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
@@ -72,13 +72,13 @@ impl Direction {
         (self.to_index() + bias) % 4
     }
 
-    fn to_unit_vector(self) -> Point2D {
+    fn to_unit_vector(self) -> Vector2 {
         use Direction::*;
         match self {
-            Right => Point2D::new(1, 0),
-            Down => Point2D::new(0, 1),
-            Left => Point2D::new(-1, 0),
-            Up => Point2D::new(0, -1),
+            Right => Vector2::new(1, 0),
+            Down => Vector2::new(0, 1),
+            Left => Vector2::new(-1, 0),
+            Up => Vector2::new(0, -1),
             Unknown => unreachable!()
         }
     }
@@ -260,7 +260,7 @@ impl<'a> Cube<'a> {
     fn find_faces(&mut self) {
         let starting_col = self.map[0].iter().position(|v| *v == b'.').unwrap();
         let mut queue = VecDeque::with_capacity(6);
-        queue.push_back((Point2D::new(starting_col as isize, 0), CubeFaceId::Top, CubeFaceId::Left, Direction::Right));
+        queue.push_back((Vector2::new(starting_col as isize, 0), CubeFaceId::Top, CubeFaceId::Left, Direction::Right));
         while let Some((offset, face_id, prev_face_id, prev_face_dir)) = queue.pop_front() {
             {
                 let face = &mut self[face_id];
@@ -280,14 +280,14 @@ impl<'a> Cube<'a> {
 
             for dir in Direction::all() {
                 let new_offset =
-                    Point2D::new(
-                        offset.x + (dir.to_unit_vector().x * self.face_size),
-                        offset.y + (dir.to_unit_vector().y * self.face_size)
+                    Vector2::new(
+                        offset.x() + (dir.to_unit_vector().x() * self.face_size),
+                        offset.y() + (dir.to_unit_vector().y() * self.face_size)
                     );
 
-                if new_offset.y < 0 ||
+                if new_offset.y() < 0 ||
                    new_offset.row_index() >= self.map.len() ||
-                   new_offset.x < 0 ||
+                   new_offset.x() < 0 ||
                    new_offset.column_index() >= self.map[new_offset.row_index()].len() ||
                    self.map[new_offset.row_index()][new_offset.column_index()] == b' ' {
 
@@ -314,65 +314,65 @@ impl<'a> Cube<'a> {
         }
     }
 
-    fn to_map_coords(&self, cube_point: (Point2D, CubeFaceId)) -> Point2D {
+    fn to_map_coords(&self, cube_point: (Vector2, CubeFaceId)) -> Vector2 {
         let face = &self[cube_point.1];
-        Point2D::new(
-            cube_point.0.x + (face.x_offset as isize),
-            cube_point.0.y + (face.y_offset as isize))
+        Vector2::new(
+            cube_point.0.x() + (face.x_offset as isize),
+            cube_point.0.y() + (face.y_offset as isize))
     }
 
-    fn translate_edge(&self, cube_point: (Point2D, CubeFaceId), dir: Direction) -> ((Point2D, CubeFaceId), Direction) {
+    fn translate_edge(&self, cube_point: (Vector2, CubeFaceId), dir: Direction) -> ((Vector2, CubeFaceId), Direction) {
         use Direction::*;
 
         let edge_mapping = &self[cube_point.1][dir];
         let new_coords = match (dir, edge_mapping.dest_dir) {
             (Right, Right) => {
-                Point2D::new(0, cube_point.0.y)
+                Vector2::new(0, cube_point.0.y())
             },
             (Down, Down) => {
-                Point2D::new(cube_point.0.x, 0)
+                Vector2::new(cube_point.0.x(), 0)
             },
             (Left, Left) => {
-                Point2D::new(self.face_size - 1, cube_point.0.y)
+                Vector2::new(self.face_size - 1, cube_point.0.y())
             },
             (Up, Up) => {
-                Point2D::new(cube_point.0.x, self.face_size - 1)
+                Vector2::new(cube_point.0.x(), self.face_size - 1)
             },
             (Right, Down) => {
-                Point2D::new(self.face_size - cube_point.0.y - 1, 0)
+                Vector2::new(self.face_size - cube_point.0.y() - 1, 0)
             },
             (Down, Right) => {
-                Point2D::new(0, self.face_size - cube_point.0.x - 1)
+                Vector2::new(0, self.face_size - cube_point.0.x() - 1)
             },
             (Down, Up) => {
-                Point2D::new(self.face_size - cube_point.0.x - 1, self.face_size - 1)
+                Vector2::new(self.face_size - cube_point.0.x() - 1, self.face_size - 1)
             },
             (Left, Up) => {
-                Point2D::new(self.face_size - cube_point.0.y - 1, self.face_size - 1)
+                Vector2::new(self.face_size - cube_point.0.y() - 1, self.face_size - 1)
             },
             (Up, Right) => {
-                Point2D::new(0, cube_point.0.x)
+                Vector2::new(0, cube_point.0.x())
             },
             (Left, Right) => {
-                Point2D::new(0, self.face_size - cube_point.0.y - 1)
+                Vector2::new(0, self.face_size - cube_point.0.y() - 1)
             },
             (Left, Down) => {
-                Point2D::new(cube_point.0.y, 0)
+                Vector2::new(cube_point.0.y(), 0)
             },
             (Down, Left) => {
-                Point2D::new(self.face_size - 1, cube_point.0.x)
+                Vector2::new(self.face_size - 1, cube_point.0.x())
             },
             (Right, Left) => {
-                Point2D::new(self.face_size - 1, self.face_size - cube_point.0.y - 1)
+                Vector2::new(self.face_size - 1, self.face_size - cube_point.0.y() - 1)
             },
             (Right, Up) => {
-                Point2D::new(cube_point.0.y, self.face_size - 1)
+                Vector2::new(cube_point.0.y(), self.face_size - 1)
             },
             (Up, Down) => {
-                Point2D::new(self.face_size - cube_point.0.x - 1, 0)
+                Vector2::new(self.face_size - cube_point.0.x() - 1, 0)
             },
             (Up, Left) => {
-                Point2D::new(self.face_size - 1, cube_point.0.x)
+                Vector2::new(self.face_size - 1, cube_point.0.x())
             },
             (from_dir, to_dir) => panic!("Unhandled mapping {:?} -> {:?}", from_dir, to_dir)
         };
@@ -382,7 +382,7 @@ impl<'a> Cube<'a> {
 
     fn walk_map(&self) -> u64 {
         let mut current_dir = Direction::Right;
-        let mut current_pos = (Point2D::new(0, 0), CubeFaceId::Top);
+        let mut current_pos = (Vector2::new(0, 0), CubeFaceId::Top);
         let mut index = 0;
         while index < self.instructions.len() {
             if self.instructions[index] >= b'0' && self.instructions[index] <= b'9' {
@@ -399,10 +399,10 @@ impl<'a> Cube<'a> {
                     let mut next_pos = (current_pos.0 + current_dir.to_unit_vector(), current_pos.1);
                     let mut next_dir = current_dir;
 
-                    if next_pos.0.x < 0 ||
-                       next_pos.0.x >= self.face_size ||
-                       next_pos.0.y < 0 ||
-                       next_pos.0.y >= self.face_size {
+                    if next_pos.0.x() < 0 ||
+                       next_pos.0.x() >= self.face_size ||
+                       next_pos.0.y() < 0 ||
+                       next_pos.0.y() >= self.face_size {
 
                         let translated = self.translate_edge(next_pos, next_dir);
                         next_pos = translated.0;

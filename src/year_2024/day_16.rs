@@ -1,26 +1,26 @@
 use std::{cmp::Reverse, collections::{BinaryHeap, VecDeque}};
 
-use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-const LEFT: Point2D = Point2D::new(-1, 0);
-const RIGHT: Point2D = Point2D::new(1, 0);
-const UP: Point2D = Point2D::new(0, -1);
-const DOWN: Point2D = Point2D::new(0, 1);
+const LEFT: Vector2 = Vector2::new(-1, 0);
+const RIGHT: Vector2 = Vector2::new(1, 0);
+const UP: Vector2 = Vector2::new(0, -1);
+const DOWN: Vector2 = Vector2::new(0, 1);
 
-const DIRECTIONS: [Point2D; 4] = [
+const DIRECTIONS: [Vector2; 4] = [
     RIGHT,
     DOWN,
     LEFT,
     UP
 ];
 
-fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
-    let mut starting_position = Point2D::default();
-    let mut ending_position = Point2D::default();
+fn solve<const PART1: bool>(input_grid: Matrix2DBorrowed<u8>) -> u64 {
+    let mut starting_position = Vector2::default();
+    let mut ending_position = Vector2::default();
 
     for r in 0..input_grid.row_count() {
         for c in 0..input_grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if input_grid[point] == b'S' {
                 starting_position = point;
             } else if input_grid[point] == b'E' {
@@ -29,7 +29,7 @@ fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
         }
     }
 
-    let mut grid_costs: Grid2D<[u64; 4]> = Grid2D::new(input_grid.row_count(), input_grid.col_count());
+    let mut grid_costs: Matrix2DOwned<[u64; 4]> = Matrix2DOwned::new(input_grid.row_count(), input_grid.col_count());
     grid_costs.backing_store_mut().fill([u64::MAX; 4]);
 
     let mut queue = BinaryHeap::new();
@@ -81,7 +81,7 @@ fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
         }
     }
 
-    let mut visited: Grid2D<bool> = Grid2D::new(input_grid.row_count(), input_grid.col_count());
+    let mut visited: Matrix2DOwned<bool> = Matrix2DOwned::new(input_grid.row_count(), input_grid.col_count());
     let mut visited_count = 0;
     while let Some((minimum_cost, position, direction)) = backtrack.pop_front() {
         if grid_costs[position][direction] == u64::MAX {
@@ -117,10 +117,10 @@ fn solve<const PART1: bool>(input_grid: Grid2DBorrowed) -> u64 {
     visited_count
 }
 
-pub fn part1(input_grid: Grid2DBorrowed) -> u64 {
+pub fn part1(input_grid: Matrix2DBorrowed<u8>) -> u64 {
     solve::<true>(input_grid)
 }
 
-pub fn part2(input_grid: Grid2DBorrowed) -> u64 {
+pub fn part2(input_grid: Matrix2DBorrowed<u8>) -> u64 {
     solve::<false>(input_grid)
 }

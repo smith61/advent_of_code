@@ -1,7 +1,7 @@
 
 use std::fmt::Display;
 
-use crate::utils::{Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Vector2};
 
 pub struct AocYear {
     pub year: &'static str,
@@ -18,7 +18,7 @@ pub enum AocResult {
     I64(i64),
     U64(u64),
     String(String),
-    Point2D(Point2D)
+    Vector2(Vector2)
 }
 
 #[derive(Clone, Copy)]
@@ -107,14 +107,14 @@ impl<'a> InputParser<'a> {
         Some(values)
     }
 
-    pub fn next_point2d(&mut self) -> Option<Point2D> {
-        Some(Point2D::new(self.next_int()?, self.next_int()?))
+    pub fn next_vector2(&mut self) -> Option<Vector2> {
+        Some(Vector2::new(self.next_int()?, self.next_int()?))
     }
 
-    pub fn next_point2ds<const COUNT: usize>(&mut self) -> Option<[Point2D; COUNT]> {
-        let mut values = [Point2D::default(); COUNT];
+    pub fn next_vector2s<const COUNT: usize>(&mut self) -> Option<[Vector2; COUNT]> {
+        let mut values = [Vector2::default(); COUNT];
         for index in 0..COUNT {
-            values[index] = self.next_point2d()?;
+            values[index] = self.next_vector2()?;
         }
 
         Some(values)
@@ -130,10 +130,10 @@ impl<'a> From<InputParser<'a>> for &'a str {
 
 }
 
-impl<'a> From<InputParser<'a>> for Grid2DBorrowed<'a> {
+impl<'a> From<InputParser<'a>> for Matrix2DBorrowed<'a, u8> {
 
     fn from(value: InputParser<'a>) -> Self {
-        Grid2DBorrowed::from_input_lines(std::str::from_utf8(value.input_str).unwrap())
+        Self::from_input_lines(std::str::from_utf8(value.input_str).unwrap())
     }
 
 }
@@ -162,10 +162,10 @@ impl From<String> for AocResult {
 
 }
 
-impl From<Point2D> for AocResult {
+impl From<Vector2> for AocResult {
 
-    fn from(inner: Point2D) -> Self {
-        AocResult::Point2D(inner)
+    fn from(inner: Vector2) -> Self {
+        AocResult::Vector2(inner)
     }
 
 }
@@ -177,7 +177,7 @@ impl Display for AocResult {
             AocResult::I64(val) => write!(f, "{}", val),
             AocResult::U64(val) => write!(f, "{}", val),
             AocResult::String(val) => write!(f, "{}", val),
-            AocResult::Point2D(val) => write!(f, "{},{}", val.x, val.y)
+            AocResult::Vector2(val) => write!(f, "{},{}", val.x(), val.y())
         }
     }
 

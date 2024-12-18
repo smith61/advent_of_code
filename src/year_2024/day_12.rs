@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
-use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-fn get_number_of_corners(point: Point2D, grid: &impl Grid<Point2D, Output = u8>) -> u64 {
+fn get_number_of_corners(point: Vector2, grid: &Matrix2DBorrowed<u8>) -> u64 {
     let mut number_of_corners = 0;
 
     let mut matches = [[false; 3]; 3];
@@ -10,7 +10,7 @@ fn get_number_of_corners(point: Point2D, grid: &impl Grid<Point2D, Output = u8>)
     let value = grid[point];
     for r_d in 0..3 {
         for c_d in 0..3 {
-            let compare_point = point + Point2D::new(c_d as isize - 1, r_d as isize - 1);
+            let compare_point = point + Vector2::new(c_d as isize - 1, r_d as isize - 1);
             matches[r_d][c_d] = grid.contains(compare_point) && grid[compare_point] == value;
         }
     }
@@ -64,15 +64,14 @@ fn get_number_of_corners(point: Point2D, grid: &impl Grid<Point2D, Output = u8>)
     number_of_corners
 }
 
-fn solve<const COUNT_PERIMETER: bool>(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+fn solve<const COUNT_PERIMETER: bool>(grid: Matrix2DBorrowed<u8>) -> u64 {
+    let mut visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
     let mut queue = VecDeque::with_capacity(32);
 
     let mut cost = 0;
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let starting_point = Point2D::new(c as isize, r as isize);
+            let starting_point = Vector2::new(c as isize, r as isize);
             if visited[starting_point] {
                 continue;
             }
@@ -114,10 +113,10 @@ fn solve<const COUNT_PERIMETER: bool>(input: &str) -> u64 {
     cost
 }
 
-pub fn part1(input: &str) -> u64 {
-    solve::<true>(input)
+pub fn part1(grid: Matrix2DBorrowed<u8>) -> u64 {
+    solve::<true>(grid)
 }
 
-pub fn part2(input: &str) -> u64 {
-    solve::<false>(input)
+pub fn part2(grid: Matrix2DBorrowed<u8>) -> u64 {
+    solve::<false>(grid)
 }

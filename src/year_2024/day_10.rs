@@ -1,17 +1,15 @@
 use std::collections::VecDeque;
 
-use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-pub fn part1(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-
+pub fn part1(grid: Matrix2DBorrowed<u8>) -> u64 {
     let mut queue = VecDeque::with_capacity(grid.row_count() * grid.col_count());
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
 
     let mut value = 0;
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if grid[point] != b'0' {
                 continue;
             }
@@ -47,16 +45,14 @@ pub fn part1(input: &str) -> u64 {
     value
 }
 
-pub fn part2(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-
+pub fn part2(grid: Matrix2DBorrowed<u8>) -> u64 {
     let mut queue = VecDeque::with_capacity(grid.row_count() * grid.col_count());
-    let mut visited_count = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut visited_count = Matrix2DOwned::new(grid.row_count(), grid.col_count());
 
     let mut value = 0;
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let point = Point2D::new(c as isize, r as isize);
+            let point = Vector2::new(c as isize, r as isize);
             if grid[point] != b'0' {
                 continue;
             }

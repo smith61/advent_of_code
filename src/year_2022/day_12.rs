@@ -1,4 +1,4 @@
-use crate::utils::Point2D;
+use crate::utils::Vector2;
 
 use std::collections::VecDeque;
 
@@ -31,7 +31,7 @@ fn run_bfs<const END_GOAL: u8>(input: &str) -> u64 {
         (0usize..row_count)
         .cartesian_product(0usize..col_count)
         .find(|(row, col)| grid[*row][*col] == b'E')
-        .map(|(row, col)| Point2D::new(col as isize, row as isize))
+        .map(|(row, col)| Vector2::new(col as isize, row as isize))
         .unwrap();
 
     let mut current_queue = VecDeque::new();
@@ -52,7 +52,7 @@ fn run_bfs<const END_GOAL: u8>(input: &str) -> u64 {
                 break 'outer;
             }
 
-            for dir_vec in [Point2D::new(1, 0), Point2D::new(-1, 0), Point2D::new(0, 1), Point2D::new(0, -1)] {
+            for dir_vec in [Vector2::new(1, 0), Vector2::new(-1, 0), Vector2::new(0, 1), Vector2::new(0, -1)] {
                 let new_point = point + dir_vec;
                 if new_point.row() < 0 ||
                    new_point.row() >= row_count as isize ||

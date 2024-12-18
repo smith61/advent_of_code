@@ -1,10 +1,9 @@
 
-use crate::utils::{Grid, Grid2D, Grid2DBorrowed, Point2D};
+use crate::utils::{Matrix, Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-const D_V: [Point2D; 4] = [Point2D::new(0, -1), Point2D::new(1, 0), Point2D::new(0, 1), Point2D::new(-1, 0)];
+const D_V: [Vector2; 4] = [Vector2::new(0, -1), Vector2::new(1, 0), Vector2::new(0, 1), Vector2::new(-1, 0)];
 
-fn can_escape(grid: &impl Grid<Point2D, Output = u8>, mut current_pos: Point2D, mut direction: usize, visited_map: &mut Grid2D<u8>) -> bool {
-
+fn can_escape<S: AsRef<[u8]>>(grid: &Matrix<2, S, u8>, mut current_pos: Vector2, mut direction: usize, visited_map: &mut Matrix2DOwned<u8>) -> bool {
     visited_map[current_pos] |= 1 << direction;
     loop {
         let next_pos = current_pos + D_V[direction];
@@ -26,14 +25,12 @@ fn can_escape(grid: &impl Grid<Point2D, Output = u8>, mut current_pos: Point2D, 
     }
 }
 
-pub fn part1(input: &str) -> u64 {
-    let grid = Grid2DBorrowed::from_input_lines(input);
-
-    let mut current_pos = Point2D::new(0, 0);
+pub fn part1(grid: Matrix2DBorrowed<u8>) -> u64 {
+    let mut current_pos = Vector2::new(0, 0);
     let mut direction = 0;
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let pos = Point2D::new(c as isize, r as isize);
+            let pos = Vector2::new(c as isize, r as isize);
             if grid[pos] == b'^' {
                 current_pos = pos;
                 direction = 0;
@@ -57,7 +54,7 @@ pub fn part1(input: &str) -> u64 {
         }
     }
 
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
     assert!(can_escape(&grid, current_pos, direction, &mut visited));
     visited.backing_store()
            .iter()
@@ -65,14 +62,14 @@ pub fn part1(input: &str) -> u64 {
            .sum()
 }
 
-pub fn part2(input: &str) -> u64 {
-    let mut grid = Grid2DBorrowed::from_input_lines(input).to_owned();
+pub fn part2(grid: Matrix2DBorrowed<u8>) -> u64 {
+    let mut grid = grid.to_owned();
 
-    let mut current_pos = Point2D::new(0, 0);
+    let mut current_pos = Vector2::new(0, 0);
     let mut direction = 0;
     for r in 0..grid.row_count() {
         for c in 0..grid.col_count() {
-            let pos = Point2D::new(c as isize, r as isize);
+            let pos = Vector2::new(c as isize, r as isize);
             if grid[pos] == b'^' {
                 current_pos = pos;
                 direction = 0;
@@ -96,8 +93,8 @@ pub fn part2(input: &str) -> u64 {
         }
     }
 
-    let mut visited = Grid2D::new(grid.row_count(), grid.col_count());
-    let mut temp_visited = Grid2D::new(grid.row_count(), grid.col_count());
+    let mut visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
+    let mut temp_visited = Matrix2DOwned::new(grid.row_count(), grid.col_count());
     let mut count = 0;
     loop {
         let next_pos = current_pos + D_V[direction];
