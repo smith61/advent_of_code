@@ -307,6 +307,23 @@ impl<const DIMENSIONS: usize> SubAssign<&Vector<DIMENSIONS>> for Vector<DIMENSIO
 
 }
 
+impl<const DIMENSIONS: usize> std::fmt::Display for Vector<DIMENSIONS> {
+
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(")?;
+        for i in 0..DIMENSIONS {
+            if i != 0 {
+                write!(f, ",")?;
+            }
+
+            write!(f, "{}", self.values[i])?;
+        }
+
+        write!(f, ")")
+    }
+
+}
+
 pub type Vector2 = Vector<2>;
 pub type Vector3 = Vector<3>;
 
