@@ -21,7 +21,8 @@ aoc_solvers!{
         day_04,
         day_05,
         day_06,
-        day_07
+        day_07,
+        day_08
     },
     year_2022 {
         day_01,
