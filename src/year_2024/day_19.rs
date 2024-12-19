@@ -1,5 +1,5 @@
 
-use fxhash::FxHashMap;
+use std::u64;
 
 #[derive(Clone, Copy, Debug)]
 enum FlatTrieNode {
@@ -81,12 +81,8 @@ impl FlatTrie {
 
 }
 
-fn count_possibilities<'a, const SINGLE_MATCH: bool>(pattern: &'a [u8], towels: &FlatTrie, memo: &mut FxHashMap<&'a [u8], u64>) -> u64 {
-    if pattern.is_empty() {
-        return 1;
-    }
-
-    if !memo.contains_key(pattern) {
+fn count_possibilities<'a, const SINGLE_MATCH: bool>(pattern: &'a [u8], towels: &FlatTrie, memo: &mut [u64]) -> u64 {
+    if memo[pattern.len()] == u64::MAX {
         let mut count = 0;
         let mut trie_index = 0;
         for pattern_index in 0..pattern.len().min(towels.get_max_depth()) {
@@ -100,17 +96,17 @@ fn count_possibilities<'a, const SINGLE_MATCH: bool>(pattern: &'a [u8], towels: 
             if child_node.is_tail() {
                 count += count_possibilities::<SINGLE_MATCH>(&pattern[(pattern_index + 1)..], towels, memo);
                 if SINGLE_MATCH && count != 0 {
-                    return count;
+                    break;
                 }
             }
 
             trie_index = child_index;
         }
 
-        memo.insert(pattern, count);
+        memo[pattern.len()] = count;
     }
 
-    *memo.get(pattern).unwrap()
+    memo[pattern.len()]
 }
 
 pub fn part1(input: &str) -> u64 {
@@ -123,8 +119,11 @@ pub fn part1(input: &str) -> u64 {
     lines.next().unwrap();
     let mut count = 0;
 
-    let mut memo = FxHashMap::default();
+    let mut memo = Vec::new();
     for line in lines {
+        memo.clear();
+        memo.resize(line.len() + 1, u64::MAX);
+        memo[0] = 1;
         if count_possibilities::<true>(line.as_bytes(), &trie, &mut memo) != 0 {
             count += 1;
         }
@@ -143,8 +142,11 @@ pub fn part2(input: &str) -> u64 {
     lines.next().unwrap();
     let mut count = 0;
 
-    let mut memo = FxHashMap::default();
+    let mut memo = Vec::new();
     for line in lines {
+        memo.clear();
+        memo.resize(line.len() + 1, u64::MAX);
+        memo[0] = 1;
         count += count_possibilities::<false>(line.as_bytes(), &trie, &mut memo);
     }
 
