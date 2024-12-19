@@ -23,13 +23,15 @@ pub enum AocResult {
 
 #[derive(Clone, Copy)]
 pub struct InputParser<'a> {
+    pub is_example: bool,
     input_str: &'a [u8]
 }
 
 impl<'a> InputParser<'a> {
 
-    pub fn new(input_str: &'a str) -> Self {
+    pub fn new(is_example: bool, input_str: &'a str) -> Self {
         Self {
+            is_example,
             input_str: input_str.as_bytes()
         }
     }
