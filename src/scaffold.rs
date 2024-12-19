@@ -1,5 +1,7 @@
 
-use std::fmt::Display;
+use std::{fmt::Display, path::Path, sync::Arc};
+
+use reqwest::{blocking::ClientBuilder, cookie::Jar, Url};
 
 use crate::utils::{Matrix2DBorrowed, Vector2};
 
@@ -185,6 +187,43 @@ impl Display for AocResult {
 
 }
 
+fn download_input(aoc_year: &str, aoc_day: &str, path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let year_num = &aoc_year["year_".len()..];
+    let day_num = if aoc_day.starts_with("day_0") {
+        &aoc_day["day_0".len()..]
+
+    } else {
+        &aoc_day["day_".len()..]
+    };
+
+    let mut session_token_file = std::env::current_dir()?;
+    session_token_file.push("input");
+    session_token_file.push("session-token.txt");
+    if !session_token_file.is_file() {
+        panic!("Failed to find session token file");
+    }
+
+    let session_token = std::fs::read(session_token_file)?;
+    let session_token = std::str::from_utf8(&session_token)?;
+
+    let input_url = Url::parse(&format!("https://adventofcode.com/{}/day/{}/input", year_num, day_num))?;
+    let client = {
+        let cookie_store = Jar::default();
+        cookie_store.add_cookie_str(&format!("session={}", session_token), &input_url);
+
+        ClientBuilder::new()
+            .cookie_provider(Arc::new(cookie_store))
+            .build()?
+    };
+
+    let response = client.get(input_url).send()?;
+
+    std::fs::create_dir_all(path.parent().unwrap())?;
+    std::fs::write(path, response.text()?)?;
+
+    Ok(())
+}
+
 pub fn get_input(aoc_year: &str, aoc_day: &str, example_input: bool) -> String {
     let mut path = std::env::current_dir().unwrap();
     path.push("input");
@@ -197,7 +236,17 @@ pub fn get_input(aoc_year: &str, aoc_day: &str, example_input: bool) -> String {
         path.push("input.txt");
     }
 
+    if !example_input && !path.is_file() {
+        println!("Input not found for {}-{}, attempting to download it...", aoc_year, aoc_day);
+        if let Err(error) = download_input(aoc_year, aoc_day, &path) {
+            panic!("Failed to download input file: {:?}", error);
+        }
+
+        println!("Successfully downloaded input file");
+    }
+
     if !path.is_file() {
+
         panic!("Failed to find input file at {:?}", path);
     }
 
@@ -225,13 +274,13 @@ macro_rules! aoc_solvers {
                         #[bench]
                         fn bench_part_1(b: &mut Bencher) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part1($crate::scaffold::InputParser::new(&input).into())));
+                            b.iter(|| std::hint::black_box($crate::$year::$day::part1($crate::scaffold::InputParser::new(false, &input).into())));
                         }
 
                         #[bench]
                         fn bench_part_2(b: &mut Bencher) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part2($crate::scaffold::InputParser::new(&input).into())));
+                            b.iter(|| std::hint::black_box($crate::$year::$day::part2($crate::scaffold::InputParser::new(false, &input).into())));
                         }
                     }
                 )*
