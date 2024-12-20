@@ -1,6 +1,6 @@
-use std::{cmp::Reverse, collections::{BinaryHeap, VecDeque}};
+use std::collections::VecDeque;
 
-use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
+use crate::utils::{DijkstraQueue, Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
 const LEFT: Vector2 = Vector2::new(-1, 0);
 const RIGHT: Vector2 = Vector2::new(1, 0);
@@ -32,11 +32,11 @@ fn solve<const PART1: bool>(input_grid: Matrix2DBorrowed<u8>) -> u64 {
     let mut grid_costs: Matrix2DOwned<[u64; 4]> = Matrix2DOwned::new(input_grid.row_count(), input_grid.col_count());
     grid_costs.backing_store_mut().fill([u64::MAX; 4]);
 
-    let mut queue = BinaryHeap::new();
-    queue.push(Reverse((0, starting_position, 0)));
+    let mut queue = DijkstraQueue::new();
+    queue.push(0, (starting_position, 0));
 
     let mut minimum_cost = u64::MAX;
-    while let Some(Reverse((cost, position, direction))) = queue.pop() {
+    while let Some((cost, (position, direction))) = queue.pop() {
         if grid_costs[position][direction] != u64::MAX {
             assert!(grid_costs[position][direction] <= cost);
             continue;
@@ -59,16 +59,16 @@ fn solve<const PART1: bool>(input_grid: Matrix2DBorrowed<u8>) -> u64 {
         let next_position = position + DIRECTIONS[direction];
         if input_grid[next_position] != b'#' {
             if grid_costs[next_position][direction] >= (cost + 1) {
-                queue.push(Reverse((cost + 1, next_position, direction)));
+                queue.push(cost + 1, (next_position, direction));
             }
         }
 
         if grid_costs[position][(direction + 1) % 4] >= (cost + 1000) {
-            queue.push(Reverse((cost + 1000, position, (direction + 1) % 4)));
+            queue.push(cost + 1000, (position, (direction + 1) % 4));
         }
         
         if grid_costs[position][(direction + 3) % 4] >= (cost + 1000) {
-            queue.push(Reverse((cost + 1000, position, (direction + 3) % 4)));
+            queue.push(cost + 1000, (position, (direction + 3) % 4));
         }
     }
 

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{marker::PhantomData, ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign}};
+use std::{collections::BinaryHeap, marker::PhantomData, ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign}};
 
 use itertools::Itertools;
 
@@ -575,6 +575,56 @@ pub type Matrix2DBorrowed<'a, T> = Matrix<2, &'a [T], T>;
 pub type Matrix2DOwned<T> = Matrix<2, Vec<T>, T>;
 pub type Matrix3DBorrowed<'a, T> = Matrix<3, &'a [T], T>;
 pub type Matrix3DOwned<T> = Matrix<3, Vec<T>, T>;
+
+#[derive(Clone, Debug)]
+struct DijkstraQueueNode<C: Ord, T>(C, T);
+
+impl<C: Ord, T> PartialEq for DijkstraQueueNode<C, T> {
+
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+
+}
+
+impl<C: Ord, T> PartialOrd for DijkstraQueueNode<C, T> {
+
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.0.partial_cmp(&self.0)
+    }
+
+}
+
+impl<C: Ord, T> Eq for DijkstraQueueNode<C, T> {
+
+}
+
+impl<C: Ord, T> Ord for DijkstraQueueNode<C, T> {
+
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.0.cmp(&self.0)
+    }
+
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DijkstraQueue<C: Ord, T>(BinaryHeap<DijkstraQueueNode<C, T>>);
+
+impl<C: Ord, T> DijkstraQueue<C, T> {
+
+    pub fn new() -> Self {
+        Self(BinaryHeap::new())
+    }
+
+    pub fn pop(&mut self) -> Option<(C, T)> {
+        self.0.pop().map(|DijkstraQueueNode(cost, element)| (cost, element))
+    }
+
+    pub fn push(&mut self, cost: C, element: T) {
+        self.0.push(DijkstraQueueNode(cost, element));
+    }
+
+}
 
 pub fn gcd(mut u: usize, mut v: usize) -> usize {
     if u == 0 {
