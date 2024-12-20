@@ -2,6 +2,8 @@
 
 use std::{marker::PhantomData, ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign}};
 
+use itertools::Itertools;
+
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Vector<const DIMENSIONS: usize> {
@@ -395,6 +397,12 @@ impl<S, T> Matrix<2, S, T> {
     pub fn col_count(&self) -> usize {
         self.grid_bounds[0]
     }
+
+    pub fn cell_iter(&self) -> impl Iterator<Item = Vector2> {
+        (0..self.row_count())
+            .cartesian_product(0..self.col_count())
+            .map(|(r, c)| (c, r).into())
+    }
 }
 
 impl<T: Clone + Default> Matrix<3, Vec<T>, T> {
@@ -454,6 +462,13 @@ impl<S, T> Matrix<3, S, T> {
 
     pub fn z_count(&self) -> usize {
         self.grid_bounds[2]
+    }
+
+    pub fn cell_iter(&self) -> impl Iterator<Item = Vector3> {
+        (0..self.z_count())
+            .cartesian_product(0..self.y_count())
+            .cartesian_product(0..self.x_count())
+            .map(|((z, y), x)| (x, y, z).into())
     }
 
 }

@@ -1,274 +1,114 @@
-use std::{collections::VecDeque, u64};
+use std::u64;
 
 use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
-
-pub fn part1(input: Matrix2DBorrowed<u8>) -> u64 {
+fn solve<const MAX_CHEAT_DISTANCE: isize>(input: Matrix2DBorrowed<u8>) -> u64 {
+    let bottom_right: Vector2 = (input.col_count() - 1, input.row_count() - 1).into();
+    
     let mut end_position = Vector2::default();
     let mut start_position = Vector2::default();
-    for r in 0..input.row_count() {
-        for c in 0..input.col_count() {
-            if input[(c, r)] == b'E' {
-                end_position = (c, r).into();
-            }
+    for cell in input.cell_iter() {
+        if input[cell] == b'E' {
+            end_position = cell;
+        }
 
-            if input[(c, r)] == b'S' {
-                start_position = (c, r).into();
-            }
+        if input[cell] == b'S' {
+            start_position = cell;
         }
     }
 
     let mut end_distance = Matrix2DOwned::new(input.row_count(), input.col_count());
-    end_distance.backing_store_mut().fill(u64::MAX);
-
-    let mut start_distance = Matrix2DOwned::new(input.row_count(), input.col_count());
-    start_distance.backing_store_mut().fill(u64::MAX);
+    end_distance.backing_store_mut().fill(u64::MAX / 2);
 
     {
+        let mut current_position = end_position;
+        let mut previous_position = Vector2::new(-1, -1);
         let mut current_cost = 0;
-        let mut current_queue = VecDeque::new();
-        current_queue.push_back(end_position);
-        let mut next_queue = VecDeque::new();
-        while !current_queue.is_empty() {
-            while let Some(position) = current_queue.pop_front() {
-                if end_distance[position] != u64::MAX {
-                    continue;
-                }
+        loop {
+            end_distance[current_position] = current_cost;
+            if current_position == start_position {
+                break;
+            }
 
-                end_distance[position] = current_cost;
-                for adj in position.adjacent_points() {
-                    if !input.contains(adj) {
-                        continue;
-                    }
+            let mut next_position = current_position;
+            for adj in current_position.adjacent_points() {
+                if adj != previous_position &&
+                   input[adj] != b'#' {
 
-                    if end_distance[adj] != u64::MAX {
-                        continue;
-                    }
-
-                    if input[adj] == b'#' {
-                        continue;
-                    }
-
-                    next_queue.push_back(adj);
+                    next_position = adj;
+                    break;
                 }
             }
 
-            std::mem::swap(&mut current_queue, &mut next_queue);
+            assert_ne!(current_position, next_position);
+            previous_position = current_position;
+            current_position = next_position;
             current_cost += 1;
         }
     }
 
-    {
-        let mut current_cost = 0;
-        let mut current_queue = VecDeque::new();
-        current_queue.push_back(start_position);
-        let mut next_queue = VecDeque::new();
-        while !current_queue.is_empty() {
-            while let Some(position) = current_queue.pop_front() {
-                if start_distance[position] != u64::MAX {
-                    continue;
-                }
-
-                start_distance[position] = current_cost;
-                for adj in position.adjacent_points() {
-                    if !input.contains(adj) {
-                        continue;
-                    }
-
-                    if start_distance[adj] != u64::MAX {
-                        continue;
-                    }
-
-                    if input[adj] == b'#' {
-                        continue;
-                    }
-
-                    next_queue.push_back(adj);
-                }
-            }
-
-            std::mem::swap(&mut current_queue, &mut next_queue);
-            current_cost += 1;
-        }
-    }
-
-    let mut count = 0;
     let orig_distance = end_distance[start_position];
-    for r in 0..input.row_count() {
-        for c in 0..input.col_count() {
-            let mid_point: Vector2 = (c, r).into();
-            if input[mid_point] == b'#' {
-                continue;
+    let threshold_distance = orig_distance - 100;
+
+    let mut cheat_path_count = 0;
+
+    {
+        let mut current_position = start_position;
+        let mut previous_position = Vector2::new(-1, -1);
+        let mut current_cost = 0;
+        loop {
+            if end_distance[current_position] < 100 {
+                break;
             }
 
-            if start_distance[mid_point] == u64::MAX {
-                continue;
-            }
+            let bottom_right_distance = bottom_right - current_position;
 
-            for r_offset in -2..=2 {
-                for c_offset in -2..=2 {
+            let left_max = MAX_CHEAT_DISTANCE.min(current_position.x());
+            let right_max = MAX_CHEAT_DISTANCE.min(bottom_right_distance.x());
+            let up_max = MAX_CHEAT_DISTANCE.min(current_position.y());
+            let down_max = MAX_CHEAT_DISTANCE.min(bottom_right_distance.y());
+
+            for r_offset in -up_max..=down_max {
+                let c_offset_max = MAX_CHEAT_DISTANCE - r_offset.abs();
+                for c_offset in -(c_offset_max.min(left_max))..=(c_offset_max.min(right_max)) {
                     let offset_vec = Vector2::new(c_offset, r_offset);
-                    if offset_vec.manhattan_distance() != 2 {
+                    let mh_distance = offset_vec.manhattan_distance() as u64;
+                    if mh_distance < 2 {
                         continue;
                     }
 
-                    let end_point = mid_point + offset_vec;
-                    if !input.contains(end_point) {
-                        continue;
-                    }
-
-                    if input[end_point] == b'#' {
-                        continue;
-                    }
-
-                    if end_distance[end_point] == u64::MAX {
-                        continue;
-                    }
-
-                    let new_distance = start_distance[mid_point] + end_distance[end_point] + 2;
-                    if (new_distance + 100) <= orig_distance {
-                        count += 1;
+                    let end_point = current_position + offset_vec;
+                    let new_distance = current_cost + end_distance[end_point] + mh_distance;
+                    if new_distance <= threshold_distance {
+                        cheat_path_count += 1;
                     }
                 }
             }
+
+            let mut next_position = current_position;
+            for adj in current_position.adjacent_points() {
+                if adj != previous_position &&
+                   input[adj] != b'#' {
+
+                    next_position = adj;
+                    break;
+                }
+            }
+
+            assert_ne!(current_position, next_position);
+            previous_position = current_position;
+            current_position = next_position;
+            current_cost += 1;
         }
     }
 
+    cheat_path_count
+}
 
-    count
+pub fn part1(input: Matrix2DBorrowed<u8>) -> u64 {
+    solve::<2>(input)
 }
 
 pub fn part2(input: Matrix2DBorrowed<u8>) -> u64 {
-    let mut end_position = Vector2::default();
-    let mut start_position = Vector2::default();
-    for r in 0..input.row_count() {
-        for c in 0..input.col_count() {
-            if input[(c, r)] == b'E' {
-                end_position = (c, r).into();
-            }
-
-            if input[(c, r)] == b'S' {
-                start_position = (c, r).into();
-            }
-        }
-    }
-
-    let mut end_distance = Matrix2DOwned::new(input.row_count(), input.col_count());
-    end_distance.backing_store_mut().fill(u64::MAX);
-
-    let mut start_distance = Matrix2DOwned::new(input.row_count(), input.col_count());
-    start_distance.backing_store_mut().fill(u64::MAX);
-
-    {
-        let mut current_cost = 0;
-        let mut current_queue = VecDeque::new();
-        current_queue.push_back(end_position);
-        let mut next_queue = VecDeque::new();
-        while !current_queue.is_empty() {
-            while let Some(position) = current_queue.pop_front() {
-                if end_distance[position] != u64::MAX {
-                    continue;
-                }
-
-                end_distance[position] = current_cost;
-                for adj in position.adjacent_points() {
-                    if !input.contains(adj) {
-                        continue;
-                    }
-
-                    if end_distance[adj] != u64::MAX {
-                        continue;
-                    }
-
-                    if input[adj] == b'#' {
-                        continue;
-                    }
-
-                    next_queue.push_back(adj);
-                }
-            }
-
-            std::mem::swap(&mut current_queue, &mut next_queue);
-            current_cost += 1;
-        }
-    }
-
-    {
-        let mut current_cost = 0;
-        let mut current_queue = VecDeque::new();
-        current_queue.push_back(start_position);
-        let mut next_queue = VecDeque::new();
-        while !current_queue.is_empty() {
-            while let Some(position) = current_queue.pop_front() {
-                if start_distance[position] != u64::MAX {
-                    continue;
-                }
-
-                start_distance[position] = current_cost;
-                for adj in position.adjacent_points() {
-                    if !input.contains(adj) {
-                        continue;
-                    }
-
-                    if start_distance[adj] != u64::MAX {
-                        continue;
-                    }
-
-                    if input[adj] == b'#' {
-                        continue;
-                    }
-
-                    next_queue.push_back(adj);
-                }
-            }
-
-            std::mem::swap(&mut current_queue, &mut next_queue);
-            current_cost += 1;
-        }
-    }
-
-    let mut count = 0;
-    let orig_distance = end_distance[start_position];
-    for r in 0..input.row_count() {
-        for c in 0..input.col_count() {
-            let mid_point: Vector2 = (c, r).into();
-            if input[mid_point] == b'#' {
-                continue;
-            }
-
-            if start_distance[mid_point] == u64::MAX {
-                continue;
-            }
-
-            for r_offset in -20..=20 {
-                for c_offset in -20..=20 {
-                    let offset_vec = Vector2::new(c_offset, r_offset);
-                    if offset_vec.manhattan_distance() > 20 {
-                        continue;
-                    }
-
-                    let end_point = mid_point + offset_vec;
-                    if !input.contains(end_point) {
-                        continue;
-                    }
-
-                    if input[end_point] == b'#' {
-                        continue;
-                    }
-
-                    if end_distance[end_point] == u64::MAX {
-                        continue;
-                    }
-
-                    let new_distance = start_distance[mid_point] + end_distance[end_point] + offset_vec.manhattan_distance() as u64;
-                    if (new_distance + 100) <= orig_distance {
-                        count += 1;
-                    }
-                }
-            }
-        }
-    }
-
-
-    count
+    solve::<20>(input)
 }
