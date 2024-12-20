@@ -3,7 +3,7 @@ use std::u64;
 use crate::utils::{Matrix2DBorrowed, Matrix2DOwned, Vector2};
 
 fn solve<const MAX_CHEAT_DISTANCE: isize>(input: Matrix2DBorrowed<u8>) -> u64 {
-    let bottom_right: Vector2 = (input.col_count() - 1, input.row_count() - 1).into();
+    let bottom_right: Vector2 = (input.col_count(), input.row_count()).into();
     
     let mut end_position = Vector2::default();
     let mut start_position = Vector2::default();
@@ -18,7 +18,7 @@ fn solve<const MAX_CHEAT_DISTANCE: isize>(input: Matrix2DBorrowed<u8>) -> u64 {
     }
 
     let mut end_distance = Matrix2DOwned::new(input.row_count(), input.col_count());
-    end_distance.backing_store_mut().fill(u64::MAX / 2);
+    end_distance.backing_store_mut().fill(u32::MAX / 2);
 
     {
         let mut current_position = end_position;
@@ -64,15 +64,15 @@ fn solve<const MAX_CHEAT_DISTANCE: isize>(input: Matrix2DBorrowed<u8>) -> u64 {
             let bottom_right_distance = bottom_right - current_position;
 
             let left_max = MAX_CHEAT_DISTANCE.min(current_position.x());
-            let right_max = MAX_CHEAT_DISTANCE.min(bottom_right_distance.x());
+            let right_max = (MAX_CHEAT_DISTANCE + 1).min(bottom_right_distance.x());
             let up_max = MAX_CHEAT_DISTANCE.min(current_position.y());
-            let down_max = MAX_CHEAT_DISTANCE.min(bottom_right_distance.y());
+            let down_max = (MAX_CHEAT_DISTANCE + 1).min(bottom_right_distance.y());
 
-            for r_offset in -up_max..=down_max {
+            for r_offset in -up_max..down_max {
                 let c_offset_max = MAX_CHEAT_DISTANCE - r_offset.abs();
-                for c_offset in -(c_offset_max.min(left_max))..=(c_offset_max.min(right_max)) {
+                for c_offset in -(c_offset_max.min(left_max))..((c_offset_max + 1).min(right_max)) {
                     let offset_vec = Vector2::new(c_offset, r_offset);
-                    let mh_distance = offset_vec.manhattan_distance() as u64;
+                    let mh_distance = offset_vec.manhattan_distance() as u32;
                     if mh_distance < 2 {
                         continue;
                     }
