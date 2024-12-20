@@ -70,7 +70,8 @@ aoc_solvers!{
         day_16,
         day_17,
         day_18,
-        day_19
+        day_19,
+        day_20
     }
 }
 
