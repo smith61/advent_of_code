@@ -71,6 +71,25 @@ impl Vector<2> {
 
 }
 
+impl From<(isize, isize)> for Vector<2> {
+
+    fn from(value: (isize, isize)) -> Self {
+        Self::new(value.0, value.1)
+    }
+
+}
+
+impl From<(usize, usize)> for Vector<2> {
+
+    fn from(value: (usize, usize)) -> Self {
+        assert!(value.0 <= isize::MAX as usize);
+        assert!(value.1 <= isize::MAX as usize);
+
+        Self::new(value.0 as isize, value.1 as isize)
+    }
+
+}
+
 impl Vector<3> {
 
     pub const fn new(x: isize, y: isize, z: isize) -> Self {
@@ -114,6 +133,26 @@ impl Vector<3> {
         ].map(|(x_d, y_d, z_d)| {
             Self::new(self.x() + x_d, self.y() + y_d, self.z() + z_d)
         })
+    }
+
+}
+
+impl From<(isize, isize, isize)> for Vector<3> {
+
+    fn from(value: (isize, isize, isize)) -> Self {
+        Self::new(value.0, value.1, value.1)
+    }
+
+}
+
+impl From<(usize, usize, usize)> for Vector<3> {
+
+    fn from(value: (usize, usize, usize)) -> Self {
+        assert!(value.0 <= isize::MAX as usize);
+        assert!(value.1 <= isize::MAX as usize);
+        assert!(value.2 <= isize::MAX as usize);
+
+        Self::new(value.0 as isize, value.1 as isize, value.2 as isize)
     }
 
 }
@@ -477,11 +516,13 @@ impl<const DIMENSIONS: usize, S: AsRef<[T]> + AsMut<[T]>, T> Matrix<DIMENSIONS, 
 
 }
 
-impl<const DIMENSIONS: usize, S: AsRef<[T]> + ?Sized, T> Index<Vector<DIMENSIONS>> for Matrix<DIMENSIONS, S, T> {
+impl<const DIMENSIONS: usize, S: AsRef<[T]> + ?Sized, T, V: Into<Vector<DIMENSIONS>>> Index<V> for Matrix<DIMENSIONS, S, T> {
 
     type Output = T;
 
-    fn index(&self, index: Vector<DIMENSIONS>) -> &Self::Output {
+    fn index(&self, index: V) -> &Self::Output {
+        let index = index.into();
+
         assert!(self.contains(index));
 
         let storage = self.storage.as_ref();
@@ -496,9 +537,11 @@ impl<const DIMENSIONS: usize, S: AsRef<[T]> + ?Sized, T> Index<Vector<DIMENSIONS
 
 }
 
-impl<const DIMENSIONS: usize, S: AsRef<[T]> + AsMut<[T]> + ?Sized, T> IndexMut<Vector<DIMENSIONS>> for Matrix<DIMENSIONS, S, T> {
+impl<const DIMENSIONS: usize, S: AsRef<[T]> + AsMut<[T]> + ?Sized, T, V: Into<Vector<DIMENSIONS>>> IndexMut<V> for Matrix<DIMENSIONS, S, T> {
     
-    fn index_mut(&mut self, index: Vector<DIMENSIONS>) -> &mut Self::Output {
+    fn index_mut(&mut self, index: V) -> &mut Self::Output {
+        let index = index.into();
+
         assert!(self.contains(index));
 
         let storage = self.storage.as_mut();
