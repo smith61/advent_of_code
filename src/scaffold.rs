@@ -260,34 +260,32 @@ macro_rules! aoc_solvers {
             $($day:ident),*
         }),*
     } => {
-        $(mod $year {
-            $(pub mod $day;)*
 
-            #[cfg(test)]
-            mod __bench {
+        $(pub(crate) mod $year {
+            $(pub(crate) mod $day;)*
 
+            pub(crate) mod bench {
                 $(
-                    mod $day {
+                    pub(crate) mod $day {
 
-                        use test::Bencher;
+                        use criterion::Criterion;
 
-                        #[bench]
-                        fn bench_part_1(b: &mut Bencher) {
+                        pub(crate) fn run_bench(c: &mut Criterion) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part1($crate::scaffold::InputParser::new(false, &input).into())));
-                        }
 
-                        #[bench]
-                        fn bench_part_2(b: &mut Bencher) {
-                            let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
-                            b.iter(|| std::hint::black_box($crate::$year::$day::part2($crate::scaffold::InputParser::new(false, &input).into())));
+                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_1"), |b| b.iter(|| $crate::$year::$day::part1($crate::scaffold::InputParser::new(false, &input).into())));
+                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_2"), |b| b.iter(|| $crate::$year::$day::part2($crate::scaffold::InputParser::new(false, &input).into())));
                         }
                     }
                 )*
             }
         })*
 
-        fn main() {
+        pub mod bench {
+            $(criterion::criterion_group!($year, $($crate::$year::bench::$day::run_bench),*);)*
+        }
+
+        pub fn aoc_bin_main() {
             const AOC_YEARS: &[$crate::scaffold::AocYear] = &[
                 $(
                     $crate::scaffold::AocYear {
