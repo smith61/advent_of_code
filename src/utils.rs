@@ -142,7 +142,7 @@ impl Vector<3> {
 impl From<(isize, isize, isize)> for Vector<3> {
 
     fn from(value: (isize, isize, isize)) -> Self {
-        Self::new(value.0, value.1, value.1)
+        Self::new(value.0, value.1, value.2)
     }
 
 }
@@ -380,7 +380,7 @@ impl<T: Clone + Default> Matrix<2, Vec<T>, T> {
     pub fn new(row_count: usize, col_count: usize) -> Self {
         Self {
             grid_bounds: [col_count, row_count],
-            grid_strides: [0, col_count],
+            grid_strides: [1, col_count],
             _bs: PhantomData::default(),
             storage: vec![T::default(); row_count * col_count]
         }
@@ -410,7 +410,7 @@ impl<T: Clone + Default> Matrix<3, Vec<T>, T> {
     pub fn new(x_count: usize, y_count: usize, z_count: usize) -> Self {
         Self {
             grid_bounds: [x_count, y_count, z_count],
-            grid_strides: [0, y_count, z_count],
+            grid_strides: [1, x_count, y_count],
             _bs: PhantomData::default(),
             storage: vec![T::default(); x_count * y_count * z_count]
         }
@@ -445,7 +445,7 @@ impl<'a> Matrix<2, &'a [u8], u8> {
 
         let row_count = bytes.len().div_ceil(row_length + line_escape_length);
 
-        Self::new(bytes, [row_length, row_count], [0, row_length + line_escape_length])
+        Self::new(bytes, [row_length, row_count], [1, row_length + line_escape_length])
     }
 
 }
@@ -541,10 +541,10 @@ impl<const DIMENSIONS: usize, S: AsRef<[T]> + ?Sized, T, V: Into<Vector<DIMENSIO
         assert!(self.contains(index));
 
         let storage = self.storage.as_ref();
-        let mut offset = index.values[DIMENSIONS - 1] as usize;
-        for dimension in (0..(DIMENSIONS - 1)).rev() {
-            offset *= self.grid_strides[dimension + 1];
+        let mut offset = 0;
+        for dimension in (0..DIMENSIONS).rev() {
             offset += index.values[dimension] as usize;
+            offset *= self.grid_strides[dimension];
         }
 
         &storage[offset]
@@ -560,10 +560,10 @@ impl<const DIMENSIONS: usize, S: AsRef<[T]> + AsMut<[T]> + ?Sized, T, V: Into<Ve
         assert!(self.contains(index));
 
         let storage = self.storage.as_mut();
-        let mut offset = index.values[DIMENSIONS - 1] as usize;
-        for dimension in (0..(DIMENSIONS - 1)).rev() {
-            offset *= self.grid_strides[dimension + 1];
+        let mut offset = 0;
+        for dimension in (0..DIMENSIONS).rev() {
             offset += index.values[dimension] as usize;
+            offset *= self.grid_strides[dimension];
         }
 
         &mut storage[offset]
