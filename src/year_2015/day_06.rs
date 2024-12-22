@@ -3,7 +3,7 @@ use crate::{scaffold::InputParser, utils::{Matrix2DOwned, Vector2}};
 pub fn part1(input: &str) -> u64 {
     let mut grid = Matrix2DOwned::new(1001, 1001);
     for line in input.trim().lines() {
-        let mut parser = InputParser::new(false, line);
+        let mut parser = InputParser::new(line);
         let mut points = parser.next_vector2s::<2>().unwrap();
         points[1] += Vector2::new(1, 1);
 
@@ -44,7 +44,7 @@ pub fn part1(input: &str) -> u64 {
 pub fn part2(input: &str) -> u64 {
     let mut grid = Matrix2DOwned::<u16>::new(1001, 1001);
     for line in input.trim().lines() {
-        let mut parser = InputParser::new(false, line);
+        let mut parser = InputParser::new(line);
         let mut points = parser.next_vector2s::<2>().unwrap();
         points[1] += Vector2::new(1, 1);
 

@@ -1,7 +1,7 @@
 
 use std::collections::VecDeque;
 
-use aoc_parse::{parser, prelude::*};
+use crate::scaffold::InputParser;
 
 fn solve<const MG: bool>(input: &str) -> String {
     let mut stacks = [0; 9].map(|_| VecDeque::<u8>::new());
@@ -23,10 +23,10 @@ fn solve<const MG: bool>(input: &str) -> String {
 
     lines.next();
 
-    let parser = parser!("move " u64 " from " usize " to " usize);
     let mut copy_stack = VecDeque::new();
     for line in lines {
-        let (count, from, to) = parser.parse(line).unwrap();
+        let nums = InputParser::new(line).next_uints::<3>().unwrap();
+        let (count, from, to) = (nums[0], nums[1] as usize, nums[2] as usize);
         if MG {
             for _ in 0..count {
                 copy_stack.push_back(stacks[from - 1].pop_back().unwrap());

@@ -25,15 +25,13 @@ pub enum AocResult {
 
 #[derive(Clone, Copy)]
 pub struct InputParser<'a> {
-    pub is_example: bool,
     input_str: &'a [u8]
 }
 
 impl<'a> InputParser<'a> {
 
-    pub fn new(is_example: bool, input_str: &'a str) -> Self {
+    pub fn new(input_str: &'a str) -> Self {
         Self {
-            is_example,
             input_str: input_str.as_bytes()
         }
     }
@@ -273,8 +271,8 @@ macro_rules! aoc_solvers {
                         pub(crate) fn run_bench(c: &mut Criterion) {
                             let input = $crate::scaffold::get_input(stringify!($year), stringify!($day), false);
 
-                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_1"), |b| b.iter(|| $crate::$year::$day::part1($crate::scaffold::InputParser::new(false, &input).into())));
-                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_2"), |b| b.iter(|| $crate::$year::$day::part2($crate::scaffold::InputParser::new(false, &input).into())));
+                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_1"), |b| b.iter(|| $crate::$year::$day::part1($crate::scaffold::InputParser::new(&input).into())));
+                            c.bench_function(concat!(stringify!($year), "::", stringify!($day), "::part_2"), |b| b.iter(|| $crate::$year::$day::part2($crate::scaffold::InputParser::new(&input).into())));
                         }
                     }
                 )*
