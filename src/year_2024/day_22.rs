@@ -1,62 +1,65 @@
 
-use crate::scaffold::InputParser;
-
-fn generate_next_number(current_number: u64) -> u64 {
-    let mut number = current_number;
-
-    number = ((number * 64) ^ number) % 16777216;
-    number = ((number / 32) ^ number) % 16777216;
-    number = ((number * 2048) ^ number) % 16777216;
+fn generate_next_number(mut number: u32) -> u32 {
+    number = ((number << 6) ^ number) & (16777216 - 1);
+    number = ((number >> 5) ^ number) & (16777216 - 1);
+    number = ((number << 11) ^ number) & (16777216 - 1);
     number
 }
 
-pub fn part1(mut input: InputParser) -> u64 {
-    let mut result = 0;
-    while let Some(mut number) = input.next_uint() {
-        for _ in 0..2000 {
-            number = generate_next_number(number);
-        }
+pub fn part1(input: &str) -> u64 {
+    let mut nums =
+        input.trim()
+             .lines()
+             .map(|l| l.parse::<u32>().unwrap())
+             .collect::<Vec<_>>();
 
-        result += number;
+    for _ in 0..2000 {
+        for num in &mut nums {
+            *num = generate_next_number(*num);
+        }
     }
 
-    result
+    nums.into_iter().fold(0, |l, r| l + (r as u64))
 }
 
-pub fn part2(mut input: InputParser) -> u64 {
-    const SHIFT_VALUE: usize = 20;
-    const MASK_VALUE: usize = SHIFT_VALUE * SHIFT_VALUE * SHIFT_VALUE * SHIFT_VALUE;
+pub fn part2(input: &str) -> u64 {
+    let nums =
+        input.trim()
+             .lines()
+             .map(|l| l.parse::<u32>().unwrap())
+             .collect::<Vec<_>>();
+
+    const SHIFT_VALUE: usize = 5;
+    const MASK_VALUE: usize = (1 << (SHIFT_VALUE * 4)) - 1;
+
+    let mut sequence_counts = vec![0u32; MASK_VALUE];
+    let mut visited = vec![0u16; MASK_VALUE];
 
     let mut current_max = 0;
-    let mut sequence_counts = vec![0u32; MASK_VALUE];
-    let mut visited = vec![0u32; MASK_VALUE];
-
     let mut line_number = 1;
-    while let Some(mut number) = input.next_uint() {
-        let mut previous_price = (number % 10) as u32;
-        let mut current_sequence = 0;
+    for mut num in nums {
+        let mut previous_price = num % 10;
+        let mut sequence = 0;
         for _ in 0..3 {
-            number = generate_next_number(number);
-            let next_price = (number % 10) as u32;
+            num = generate_next_number(num);
+            let next_price = num % 10;
             let diff = (next_price + 9 - previous_price) as usize;
             previous_price = next_price;
-            
-            current_sequence = ((current_sequence * SHIFT_VALUE) + diff) % MASK_VALUE;
+
+            sequence = (sequence << SHIFT_VALUE) | diff;
         }
 
         for _ in 3..2000 {
-            number = generate_next_number(number);
-            let next_price = (number % 10) as u32;
+            num = generate_next_number(num);
+            let next_price = num % 10;
             let diff = (next_price + 9 - previous_price) as usize;
             previous_price = next_price;
 
-            current_sequence = ((current_sequence * SHIFT_VALUE) + diff) % MASK_VALUE;
-            if visited[current_sequence] != line_number {
-                assert!(visited[current_sequence] < line_number);
-
-                visited[current_sequence] = line_number;
-                sequence_counts[current_sequence] += next_price;
-                current_max = current_max.max(sequence_counts[current_sequence]);
+            sequence = ((sequence << SHIFT_VALUE) | diff) & MASK_VALUE;
+            if visited[sequence] != line_number {
+                visited[sequence] = line_number;
+                sequence_counts[sequence] += next_price;
+                current_max = current_max.max(sequence_counts[sequence]);
             }
         }
 
