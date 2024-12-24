@@ -1,4 +1,5 @@
 #![cfg_attr(test, allow(dead_code, unused_imports))]
+#![feature(random)]
 
 mod scaffold;
 mod utils;
@@ -71,7 +72,8 @@ aoc_solvers!{
         day_20,
         day_21,
         day_22,
-        day_23
+        day_23,
+        day_24
     }
 }
 
