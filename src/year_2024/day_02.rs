@@ -1,26 +1,49 @@
 
-fn is_safe(levels: &[u64]) -> bool {
-    if levels[0] < levels[1] {
-        for i in 1..levels.len() {
-            if levels[i-1] > levels[i] {
+fn is_safe(mut levels: impl Iterator<Item = u64>) -> bool {
+    let first = levels.next().unwrap();
+    let second = levels.next().unwrap();
+
+    if first < second {
+        let mut current = second;
+        let mut previous = first;
+        loop {
+            if previous > current {
                 return false;
             }
 
-            let diff = levels[i] - levels[i-1];
+            let diff = current - previous;
             if diff < 1 || diff > 3 {
                 return false;
+            }
+
+            if let Some(next) = levels.next() {
+                previous = current;
+                current = next;
+
+            } else {
+                break;
             }
         }
 
     } else {
-        for i in 1..levels.len() {
-            if levels[i-1] < levels[i] {
+        let mut current = second;
+        let mut previous = first;
+        loop {
+            if previous < current {
                 return false;
             }
 
-            let diff = levels[i-1] - levels[i];
+            let diff = previous - current;
             if diff < 1 || diff > 3 {
                 return false;
+            }
+
+            if let Some(next) = levels.next() {
+                previous = current;
+                current = next;
+
+            } else {
+                break;
             }
         }
     }
@@ -32,58 +55,12 @@ pub fn part1(input: &str) -> u64 {
     let mut count = 0;
 
     for line in input.lines() {
-        let mut parts = line.split(" ");
-        let first = parts.next().unwrap().parse::<u64>().unwrap();
-        let second = parts.next().unwrap().parse::<u64>().unwrap();
+        let levels =
+            line.split(" ")
+                .map(|p| p.parse::<u64>().unwrap());
 
-        count += 1;
-        if first < second {
-            let mut current = second;
-            let mut previous = first;
-            loop {
-                if previous > current {
-                    count -= 1;
-                    break;
-                }
-
-                let diff = current - previous;
-                if diff < 1 || diff > 3 {
-                    count -= 1;
-                    break;
-                }
-
-                if let Some(next) = parts.next() {
-                    previous = current;
-                    current = next.parse().unwrap();
-
-                } else {
-                    break;
-                }
-            }
-
-        } else {
-            let mut current = second;
-            let mut previous = first;
-            loop {
-                if previous < current {
-                    count -= 1;
-                    break;
-                }
-
-                let diff = previous - current;
-                if diff < 1 || diff > 3 {
-                    count -= 1;
-                    break;
-                }
-
-                if let Some(next) = parts.next() {
-                    previous = current;
-                    current = next.parse().unwrap();
-
-                } else {
-                    break;
-                }
-            }
+        if is_safe(levels) {
+            count += 1;
         }
     }
 
@@ -99,15 +76,19 @@ pub fn part2(input: &str) -> u64 {
                 .map(|v| v.parse::<u64>().unwrap())
                 .collect::<Vec<_>>();
 
-        if is_safe(&levels) {
+        if is_safe(levels.iter().cloned()) {
             count += 1;
             continue;
         }
 
         for i in 0..levels.len() {
-            let mut new_levels = levels.clone();
-            new_levels.remove(i);
-            if is_safe(&new_levels) {
+            let iter =
+                levels.iter()
+                      .enumerate()
+                      .filter(|&(index, _)| index != i)
+                      .map(|(_, l)| *l);
+
+            if is_safe(iter) {
                 count += 1;
                 break;
             }
